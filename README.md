@@ -143,6 +143,7 @@ We have an API key for Gemini 4.
 | `backend/` | Eric | multiplayer / WebSocket server |
 | `scripts/` | Argon loop | data fetch, Argon client, generate / render / loop |
 | `out/` | Argon loop | baseline and loop iterations |
+| `managed_agent/` | Eric | Gemini managed agent that rebuilds the whole project from scratch (see its README) |
 
 Argon loop work happens on the `loop` branch and merges into `main` at the end.
 Don't delete other people's paths. Before pushing: `git pull --rebase` for unpushed local commits, but on an already-pushed branch (e.g. `loop`) use `git merge origin/main` instead of rebasing. Never force-push.
