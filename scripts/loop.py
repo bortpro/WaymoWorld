@@ -43,38 +43,52 @@ WAYMO_CAR = (
 RUBRIC = {
     "waymo_look": "Player and opponent cars clearly read as Waymo robotaxis (see description).",
     "sf_realism": "Streets look like San Francisco, matching the real reference photos: steep hills, "
-                  "Victorian/Edwardian row houses, bay windows, street trees, overhead wires, lighting.",
+                  "Victorian/Edwardian row houses, bay windows, street trees on sidewalks, overhead wires, "
+                  "lighting. Penalise trees/props in the roadway and landmarks placed inside the street grid.",
     "laser_tag_fun": "Laser tag is visible and satisfying: beams, hits register, opponents move and fight back.",
     "driving_feel": "Driving responds to inputs, the car moves through the city and doesn't get stuck.",
-    "visual_polish": "Overall visual quality: clear sunny daytime, crisp contrast (not washed out or hazy), "
+    "visual_polish": "Overall visual quality: clear sunny daytime, crisp contrast, NO fog or haze, "
                      "lighting, materials, composition, HUD clarity, no glitches.",
     "sf_landmarks": "Recognisable SF landmarks are visible: Golden Gate Bridge, Transamerica Pyramid, Salesforce "
                     "Tower, Painted Ladies, Coit/Sutro Tower, Bay Bridge, cable cars, Lombard St, fog.",
 }
 
-GRAPHICS_SPEC = """GRAPHICS UPGRADE SPEC (target: clean, cinematic, GTA-like realism, still fast):
-Rendering: renderer.toneMapping = ACESFilmicToneMapping, outputColorSpace = SRGBColorSpace, physically
-based MeshStandard/MeshPhysical materials. Sky from three/addons/objects/Sky.js with a golden-hour sun; build
-an environment map from it with PMREMGenerator so paint/glass/wet asphalt reflect the sky. One directional
-sun with PCFSoft shadows whose shadow camera follows the player (tight frustum, 2048 map). Hemisphere fill
-light. Fog colour matched to the horizon, plus a soft low fog bank rolling in from the bay.
-Post: EffectComposer with RenderPass, GTAOPass (ambient occlusion), restrained UnrealBloomPass (only lasers,
-lights, emissives), OutputPass; SMAA or FXAA. Never wash the frame out.
-City: Victorian/Edwardian row houses with bay windows, cornices, trim, painted-lady palettes, canvas-generated
-facade textures; steep hills; sidewalks with curbs, street trees, lamp posts, overhead Muni wires, lane
-markings, manhole covers; use InstancedMesh for every repeated object and merge static geometry.
-Landmarks (deterministic placement, visible from hills): Golden Gate Bridge (International Orange towers,
-catenary cables, deck, fog around towers), Transamerica Pyramid, Salesforce Tower, Painted Ladies row with
-skyline behind, Coit Tower, Sutro Tower, Bay Bridge, Ferry Building clock tower, cable car + tracks, Lombard
-zigzag. Use lower detail for distant landmarks.
-Waymo: Jaguar I-PACE silhouette, glossy white MeshPhysicalMaterial with clearcoat, tinted reflective glass,
-roof lidar dome, corner sensor pods.
-Performance: setPixelRatio(min(devicePixelRatio, 1.5)), a single shadow-casting light, no real-time point
-lights (lasers glow via emissive + bloom), instancing, frustum culling, fog to bound draw distance."""
+GRAPHICS_SPEC = """GRAPHICS UPGRADE SPEC (target: clean, cinematic, GTA-like realism, still fast). ALWAYS clear daytime.
+NO FOG ANYWHERE: scene.fog = null, no fog layers, no haze, no fog around landmarks.
+1. Lighting and rendering: renderer.toneMapping = ACESFilmicToneMapping, outputColorSpace = SRGBColorSpace,
+   toneMappingExposure ~1.0, physically based MeshStandard/MeshPhysical materials. Physically based sky and
+   sun from three/addons/objects/Sky.js (clear midday-to-afternoon sun, blue sky). Environment map from that
+   sky via PMREMGenerator so paint, glass and slightly wet asphalt reflect it. One directional sun with soft
+   PCFSoft shadows whose shadow camera follows the player (tight frustum). Hemisphere fill light.
+   GTAOPass ambient occlusion for contact shadows where buildings meet the street. Restrained
+   post-processing: UnrealBloomPass strength <= 0.3, threshold >= 0.85 (only lasers/headlights/emissives
+   glow), SMAA or FXAA anti-aliasing, mild colour grading, OutputPass. Never washed out.
+2. Landmarks (simple shapes, deterministic placement, visible from the hills):
+   - Golden Gate Bridge: International Orange towers, catenary cables as curved tubes, deck. Place it ONLY at
+     the map boundary over water (beyond the north edge of the city), never inside the street grid.
+   - Transamerica Pyramid: tall narrow pyramid with window bands, in the downtown cluster.
+   - Salesforce Tower: tapered rounded box, tallest in the downtown cluster.
+   - Painted Ladies: a row of Victorians in signature colours facing a small park, downtown skyline behind.
+   - Coit Tower, Sutro Tower, Bay Bridge, Ferry Building clock tower: simple shapes on the skyline / edges.
+   - Cable cars on tracks and the Lombard St zigzag as gameplay spots, not just scenery.
+3. Cleaner city and cars:
+   - InstancedMesh for windows, trees, streetlights, parked cars and bots; merge static buildings.
+   - Victorian/Edwardian facades: canvas-generated textures with bay windows, cornices and trim, plus
+     normal/bump detail so they catch the light; painted-lady palettes.
+   - Waymo: Jaguar I-PACE-like body, glossy white MeshPhysicalMaterial with clearcoat, tinted reflective
+     glass, roof lidar dome, corner sensor pods.
+   - Streets: asphalt with slight wetness, lane markings, manhole covers, sidewalks with curbs, overhead
+     Muni wires.
+   - PLACEMENT REALISM: trees, poles, lamps, hydrants, benches and all props go ONLY on sidewalks or in
+     parks, NEVER in the roadway or intersections; check each prop against the street bounds before placing.
+     Landmarks never block streets.
+4. Keeping it fast: setPixelRatio(min(devicePixelRatio, 1.5)); one shadow-casting light with a small shadow
+   map; no real-time point lights (lasers glow via emissive + bloom); merge static buildings; low-detail
+   distant landmarks; bound the visible city with terrain/water at the edges and a sensible camera far
+   plane instead of fog."""
 
-LOOK = """LOOK: clear, sunny SF daytime with crisp contrast, like the TARGET LOOK screenshot if provided.
-toneMappingExposure about 1.0; scene fog only far away (near >= 250 units) and subtle; bloom strength
-<= 0.3 with threshold >= 0.85 so only lasers/emissives glow; no white haze, no overexposed sky or buildings."""
+LOOK = """LOOK: clear, sunny SF daytime with crisp contrast, like the TARGET LOOK screenshots if provided.
+No fog or haze of any kind; bloom only on lasers/emissives; no overexposed sky or buildings."""
 
 MP_CONTRACT = """MULTIPLAYER CONTRACT (another developer owns networking; keep it working):
 Do not change networking code or message formats (SERVER_URL, ws, myId, connect, netSend, sendState, roster,
