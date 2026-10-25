@@ -56,9 +56,13 @@ RUBRIC = {
 GRAPHICS_SPEC = """GRAPHICS UPGRADE SPEC (target: clean, cinematic, GTA-like realism, still fast). ALWAYS clear daytime.
 NO FOG ANYWHERE: scene.fog = null, no fog layers, no haze, no fog around landmarks.
 1. Lighting and rendering: renderer.toneMapping = ACESFilmicToneMapping, outputColorSpace = SRGBColorSpace,
-   toneMappingExposure ~1.0, physically based MeshStandard/MeshPhysical materials. Physically based sky and
-   sun from three/addons/objects/Sky.js (clear midday-to-afternoon sun, blue sky). Environment map from that
-   sky via PMREMGenerator so paint, glass and slightly wet asphalt reflect it. One directional sun with soft
+   toneMappingExposure ~0.78 (daytime but not bleached), physically based MeshStandard/MeshPhysical
+   materials. SKY MUST READ BLUE: a gradient sky dome (zenith ~#1c5fc2, horizon ~#8cc2ee, small sun disc)
+   pinned to the far plane (gl_Position.z = gl_Position.w) and following the camera. Any sky mesh larger
+   than the camera far plane is clipped and the frame turns white. Build the environment map from the same
+   sky material on a small (r=50) dome via PMREMGenerator.fromScene, environmentIntensity ~0.4.
+   Asphalt is NON-metallic (metalness 0, roughness ~0.7, mid-grey ~#5a5f66), otherwise it mirrors the sky.
+   Lights: sun ~1.9, hemisphere fill ~0.35. One directional sun with soft
    PCFSoft shadows whose shadow camera follows the player (tight frustum). Hemisphere fill light.
    GTAOPass ambient occlusion for contact shadows where buildings meet the street. Restrained
    post-processing: NO UnrealBloomPass in daytime (with OutputPass the composer works in linear HDR, so
@@ -67,6 +71,8 @@ NO FOG ANYWHERE: scene.fog = null, no fog layers, no haze, no fog around landmar
 2. Landmarks (simple shapes, deterministic placement, visible from the hills):
    - Golden Gate Bridge: International Orange towers, catenary cables as curved tubes, deck. Place it ONLY at
      the map boundary over water (beyond the north edge of the city), never inside the street grid.
+   - WATER IS ALWAYS OUTSIDE THE CITY: every water plane must start at or beyond the city edge (|x|,|z| >=
+     OFFSET, or the shoreline) and sit below the lowest street; never let a water plane overlap the street grid.
    - Transamerica Pyramid: tall narrow pyramid with window bands, in the downtown cluster.
    - Salesforce Tower: tapered rounded box, tallest in the downtown cluster.
    - Painted Ladies: a row of Victorians in signature colours facing a small park, downtown skyline behind.
