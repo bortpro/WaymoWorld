@@ -1,0 +1,12 @@
+{
+  "model": "gemini-4-argon",
+  "prompt": "I want to build a 3D world that's visually appealing. I want to build \"Waymo World\", a realistic street world of SF where you control a Waymo, in a world full of other Waymo's, and they all play laser tag with each other. This should be a fun realistic 3D game. Build it",
+  "system_instruction": "Deliver the game as ONE self-contained index.html file in a single ```html code block. Load three.js only from a pinned CDN URL (e.g. https://cdn.jsdelivr.net/npm/three@0.160.0/...) via an import map. No other external assets; generate all geometry and textures procedurally. It must run by simply opening the file in a browser.",
+  "seconds": 158.1,
+  "finish_reason": "FinishReason.STOP",
+  "input_tokens": 193,
+  "output_tokens": 17376,
+  "thinking_tokens": null,
+  "html_extracted": true,
+  "html_bytes": 61754
+}
