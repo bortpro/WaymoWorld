@@ -4,8 +4,8 @@ A multiplayer browser game: players drive Waymos around a city and shoot lasers 
 
 ## Status
 
-- **Frontend** (`index.html`): a fairly complete **single-player** game. Multiplayer is not wired up yet.
-- **Backend** (`backend/`): scaffolding for a WebSocket server. It currently just relays every message to all other connected clients; there's no game logic yet.
+- **Frontend** (`index.html`): multiplayer game. A start modal asks for a username; a leaderboard (top right) shows players online and kill counts. Every other car is a real player (the old single-player bots were removed).
+- **Backend** (`backend/`): WebSocket game server. Tracks players, broadcasts 20 Hz position snapshots, validates hits, and owns HP / kills / deaths.
 
 ## Deployments (Render)
 
@@ -15,7 +15,7 @@ A multiplayer browser game: players drive Waymos around a city and shoot lasers 
 | Backend  | https://waymoworld-server.onrender.com    |
 
 - WebSocket endpoint: `wss://waymoworld-server.onrender.com/ws`
-- Health check: `https://waymoworld-server.onrender.com/health` returns `{ ok, clients }`
+- Health check: `https://waymoworld-server.onrender.com/health` returns `{ ok, clients, players }`
 
 ## Layout
 
@@ -23,7 +23,7 @@ A multiplayer browser game: players drive Waymos around a city and shoot lasers 
 index.html          # Whole frontend: one HTML file with an inline ES module, Three.js r160 from jsDelivr via importmap
 backend/
   package.json      # Node >= 20, ESM, sole dependency: ws
-  src/server.js     # HTTP server (/health) + WebSocketServer on /ws, broadcast relay, 30s ping/pong heartbeat
+  src/server.js     # HTTP server (/health) + WebSocketServer on /ws, player registry, 20 Hz snapshots, hit validation, 30s ping/pong heartbeat
 ```
 
 ## Running locally
@@ -44,15 +44,48 @@ npm run dev      # node --watch; listens on $PORT or 8080
 
 Local WebSocket URL: `ws://localhost:8080/ws`
 
-## Message protocol (current)
+The frontend picks its server automatically: `ws://localhost:8080/ws` when served from `localhost` / `127.0.0.1` / `file://`, otherwise `wss://waymoworld-server.onrender.com/ws`. Override with `?server=ws://host:port/ws`.
 
-- On connect, the server sends `{ "type": "welcome" }`.
-- Clients send JSON; the server rebroadcasts each message unchanged to every other client.
-- If a message isn't valid JSON, the server replies `{ "type": "error", "error": "invalid JSON" }`.
+To test multiplayer locally, open the page in two browser windows.
+
+## Multiplayer model
+
+- **Each client owns its own car's movement** and sends `state` 20×/s. The server clamps it to the world bounds and rebroadcasts everyone in `snap`.
+- **Remote cars** ease toward the latest snapshot, extrapolating with `speed` for up to 250 ms; a jump of more than 40 units snaps (respawn).
+- **Hits are detected by the shooter's client** (its own lasers vs. remote cars) and reported as `hit`. The server rejects a hit if there's no unspent shot from the last 2 s, the target is more than 320 units away, or the target is within 2 s of (re)spawning. Otherwise it applies 25 damage.
+- **The server owns HP, kills, and deaths.** At 0 HP it broadcasts `kill`, resets the victim to 100 HP, and heals the killer by 25. The victim's client picks a new random spawn point.
+- **The city is generated with a seeded RNG** (`cityRandom`, seed 415), so building heights, and therefore laser collisions, match on every client. Window textures still use `Math.random` (cosmetic only).
+- Clients on the start modal are connected but not joined: they receive all broadcasts (remote cars drive around behind the modal), but aren't in the roster.
+
+## Message protocol
+
+All messages are JSON with a `type` field. Tuning constants are at the top of `backend/src/server.js`; keep them in sync with `index.html`.
+
+Client → server:
+
+| type | fields | notes |
+|---|---|---|
+| `join` | `name` | sent on Start; name is sanitized to ≤16 chars of letters, digits, space, `_.-` (default `Waymo<id>`) |
+| `state` | `x, z, a, s` | position, heading (rad), speed; 20 Hz |
+| `shoot` | `p: [x,y,z], d: [x,y,z]` | laser origin and direction; server cooldown 150 ms |
+| `hit` | `target` | id of the remote player your laser hit |
+
+Server → client:
+
+| type | fields | notes |
+|---|---|---|
+| `welcome` | `players: [{id,name,kills,deaths,x,z,a,s,hp}]` | on connect |
+| `joined` | `id, name` | reply to your `join` (with the sanitized name) |
+| `join` / `leave` | `player` / `id` | broadcast to everyone, including the joiner |
+| `snap` | `p: [[id,x,z,a,s,hp], ...]` | 20 Hz, all joined players |
+| `shoot` | `id, p, d` | to everyone except the shooter |
+| `hp` | `id, hp, by?` | after damage or the kill heal |
+| `kill` | `killer, victim, killerKills, victimDeaths` | |
+| `error` | `error` | e.g. invalid JSON |
 
 ## Game state in `index.html`
 
-The world is 3D with **y pointing up**; cars drive on the **x–z plane**. State lives in module-level globals: `player`, `bots[]`, `lasers[]`, `particles[]`, `buildings[]` (collision boxes `{minX,maxX,minZ,maxZ,maxY}`), `score`, and `keys` (input).
+The world is 3D with **y pointing up**; cars drive on the **x–z plane**. State lives in module-level globals: `player` (local car), `remoteVehicles` (Set of other players' cars), `roster` (Map id → `{id,name,kills,deaths,vehicle}`), `myId`, `lasers[]`, `particles[]`, `buildings[]` (collision boxes `{minX,maxX,minZ,maxZ,maxY}`), and `keys` (input).
 
 ### Car (`class Vehicle`)
 
@@ -65,10 +98,10 @@ The world is 3D with **y pointing up**; cars drive on the **x–z plane**. State
 | `energy` | 0–100, spent on boost and shooting | probably only the owner needs it |
 | `pos.y` | worked out from the terrain (`getElevation(x, z)`) | no |
 | `mesh.quaternion` | tilt on hills, worked out from the terrain normal and `angle` | no |
-| `vel` | declared but never used | no |
 | `maxSpeed`, `accel`, `handling` | fixed tuning values | no |
 | `lastShot` | timer that limits fire rate | no (owner only) |
-| `aiState`, `targetAngle`, `aiTimer` | bot AI only | no |
+| `net` (remote cars only) | latest snapshot `{x,z,a,s,t}` that the rendered position eases toward | n/a |
+| `spawnTime` | used to show spawn protection | no (server tracks its own) |
 
 Minimum to draw a remote car: `{x, z, angle}`. Add `speed` for smoothing between updates and `hp` for health/kills.
 

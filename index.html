@@ -34,7 +34,8 @@
         }
         .hud-top {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-start;
+            gap: 50px;
             padding: 20px 40px;
             background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
             color: #fff;
@@ -163,18 +164,34 @@
         #overlay {
             position: absolute;
             top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(5, 10, 20, 0.85);
-            backdrop-filter: blur(10px);
+            background: rgba(5, 10, 20, 0.45);
             z-index: 10;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             color: #fff;
             text-align: center;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        .modal {
+            width: 100%;
+            max-width: 520px;
+            max-height: 100%;
+            overflow-y: auto;
+            box-sizing: border-box;
+            background: rgba(8, 14, 28, 0.88);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 240, 255, 0.35);
+            border-radius: 16px;
+            box-shadow: 0 0 40px rgba(0, 240, 255, 0.2);
+            padding: 32px 36px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         #overlay h1 {
-            font-size: 64px;
+            font-size: 44px;
             margin: 0;
             background: linear-gradient(45deg, #00f0ff, #ff00aa);
             -webkit-background-clip: text;
@@ -183,23 +200,92 @@
             letter-spacing: 4px;
         }
         #overlay p {
-            font-size: 18px;
+            font-size: 15px;
             color: #ccc;
-            max-width: 600px;
-            line-height: 1.6;
-            margin: 20px 0 40px 0;
+            line-height: 1.5;
+            margin: 12px 0 20px 0;
+        }
+        #name-input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px 16px;
+            font-size: 18px;
+            font-family: inherit;
+            color: #fff;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(0, 240, 255, 0.5);
+            border-radius: 10px;
+            outline: none;
+            text-align: center;
+            margin-bottom: 20px;
+            user-select: text;
+        }
+        #name-input:focus {
+            border-color: #00f0ff;
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
         }
         .controls-grid {
             display: grid;
             grid-template-columns: auto auto;
-            gap: 15px 30px;
+            gap: 10px 20px;
             text-align: left;
+            font-size: 14px;
+            align-items: center;
             background: rgba(255,255,255,0.05);
-            padding: 20px 40px;
+            padding: 16px 24px;
             border-radius: 10px;
             border: 1px solid rgba(0, 240, 255, 0.2);
-            margin-bottom: 40px;
+            margin-bottom: 24px;
         }
+        #conn-status {
+            margin-top: 14px;
+            font-size: 12px;
+            color: #889;
+        }
+        #leaderboard {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 230px;
+            z-index: 11;
+            background: rgba(5, 10, 20, 0.7);
+            border: 1px solid rgba(0, 240, 255, 0.35);
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: #fff;
+            font-size: 14px;
+            pointer-events: none;
+        }
+        #lb-online {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #00f0ff;
+            padding-bottom: 8px;
+            margin-bottom: 6px;
+            border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+        }
+        #lb-online::before {
+            content: '';
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--dot, #00ff88);
+            box-shadow: 0 0 6px var(--dot, #00ff88);
+        }
+        .lb-row {
+            display: grid;
+            grid-template-columns: 22px 1fr auto;
+            gap: 6px;
+            padding: 3px 0;
+        }
+        .lb-row .rank { color: #889; }
+        .lb-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .lb-row .kills { font-weight: bold; color: #ff5588; }
+        .lb-row.me .name { color: #00f0ff; font-weight: bold; }
+        .lb-empty { color: #889; font-size: 12px; padding: 4px 0; }
         .key {
             background: #222;
             border: 1px solid #00f0ff;
@@ -230,20 +316,20 @@
         }
         #kill-feed {
             position: absolute;
-            top: 100px;
-            right: 40px;
+            top: 110px;
+            left: 40px;
             display: flex;
             flex-direction: column;
             gap: 5px;
-            align-items: flex-end;
+            align-items: flex-start;
         }
         .feed-item {
             background: rgba(0,0,0,0.6);
-            border-right: 3px solid #00f0ff;
+            border-left: 3px solid #00f0ff;
             color: #fff;
             padding: 5px 15px;
             font-size: 14px;
-            border-radius: 4px 0 0 4px;
+            border-radius: 0 4px 4px 0;
             animation: fadeOut 4s forwards;
         }
         @keyframes fadeOut {
@@ -287,8 +373,8 @@
                     <span>Tags (Kills)</span>
                 </div>
                 <div class="stat">
-                    <div id="bots-val">15</div>
-                    <span>Active Units</span>
+                    <div id="deaths-val">0</div>
+                    <span>Deaths</span>
                 </div>
                 <div class="stat">
                     <div id="speed-val">0</div>
@@ -318,16 +404,25 @@
         </div>
     </div>
 
+    <div id="leaderboard">
+        <div id="lb-online">Connecting…</div>
+        <div id="lb-rows"></div>
+    </div>
+
     <div id="overlay">
-        <h1>Waymo World</h1>
-        <p>Welcome to San Francisco. The humans are asleep, and the autonomous fleet has engaged in a city-wide game of high-voltage Laser Tag. Navigate the hills, dodge the Transamerica Pyramid, and tag rogue units using your roof-mounted LiDAR cannon.</p>
-        <div class="controls-grid">
-            <div class="key">W / S or ↑ / ↓</div><div>Throttle / Brake & Reverse</div>
-            <div class="key">A / D or ← / →</div><div>Steer Left / Right</div>
-            <div class="key">SPACE or CLICK</div><div>Fire Roof Laser</div>
-            <div class="key">SHIFT</div><div>Overclock Motor (Boost)</div>
+        <div class="modal">
+            <h1>Waymo World</h1>
+            <p>The humans are asleep and the autonomous fleet has turned San Francisco into a city-wide laser tag arena. Every other Waymo is a real player. Tag them with your roof-mounted LiDAR cannon: 4 hits takes a car out. Most tags tops the leaderboard.</p>
+            <input id="name-input" type="text" maxlength="16" placeholder="Choose a username" autocomplete="off" spellcheck="false">
+            <div class="controls-grid">
+                <div class="key">W / S or ↑ / ↓</div><div>Throttle / Brake & Reverse</div>
+                <div class="key">A / D or ← / →</div><div>Steer Left / Right</div>
+                <div class="key">SPACE or CLICK</div><div>Fire Roof Laser</div>
+                <div class="key">SHIFT</div><div>Overclock Motor (Boost)</div>
+            </div>
+            <button id="start-btn">Start</button>
+            <div id="conn-status">Connecting to server…</div>
         </div>
-        <button id="start-btn">Initialize System</button>
     </div>
 
     <script type="module">
@@ -432,13 +527,42 @@
 
         let scene, camera, renderer, composer;
         let player;
-        let bots = [];
         let lasers = [];
         let particles = [];
         let buildings = []; // Bounding boxes for collision
         let gameActive = false;
-        let score = 0;
         let clock = new THREE.Clock();
+
+        // --- MULTIPLAYER STATE ---
+        const SERVER_URL = new URLSearchParams(location.search).get('server') ||
+            (['localhost', '127.0.0.1', ''].includes(location.hostname)
+                ? 'ws://localhost:8080/ws'
+                : 'wss://waymoworld-server.onrender.com/ws');
+        const STATE_SEND_MS = 50;
+        const SPAWN_PROTECTION = 2.0; // seconds, mirrors the server
+        let ws = null;
+        let connected = false;
+        let myId = null;
+        let myName = '';
+        const roster = new Map();         // id -> { id, name, kills, deaths, vehicle } (vehicle is null for me)
+        const remoteVehicles = new Set(); // Vehicle instances driven by other players
+
+        // Seeded RNG so every client generates the same city (laser/building collisions must agree)
+        function mulberry32(seed) {
+            return function() {
+                seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+                let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+                t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            };
+        }
+        const cityRandom = mulberry32(415);
+
+        function normalizeAngle(a) {
+            while (a > Math.PI) a -= Math.PI * 2;
+            while (a < -Math.PI) a += Math.PI * 2;
+            return a;
+        }
 
         // Inputs
         const keys = { w: false, a: false, s: false, d: false, space: false, shift: false };
@@ -684,40 +808,105 @@
         }
 
         // --- ENTITY CLASSES ---
+        function createNameLabel() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 64;
+            const tex = new THREE.CanvasTexture(canvas);
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+            sprite.scale.set(6, 1.5, 1);
+            sprite.position.y = 4;
+            sprite.userData.canvas = canvas;
+            return sprite;
+        }
+
+        function drawNameLabel(sprite, name, hp) {
+            const canvas = sprite.userData.canvas;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.font = 'bold 26px "Segoe UI", Tahoma, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+            ctx.strokeText(name, 128, 22);
+            ctx.fillStyle = '#d8d8e0';
+            ctx.fillText(name, 128, 22);
+            // HP bar
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillRect(68, 46, 120, 10);
+            ctx.fillStyle = hp > 50 ? '#00cc77' : hp > 25 ? '#ccaa00' : '#cc2244';
+            ctx.fillRect(70, 48, 116 * Math.max(0, hp) / 100, 6);
+            sprite.material.map.needsUpdate = true;
+        }
+
         class Vehicle {
-            constructor(x, z, isPlayer = false) {
+            constructor(x, z, isPlayer = false, name = '') {
                 this.isPlayer = isPlayer;
+                this.isRemote = !isPlayer;
                 this.mesh = createWaymoMesh(isPlayer);
                 scene.add(this.mesh);
-                
+
                 this.pos = new THREE.Vector3(x, getElevation(x, z), z);
-                this.vel = new THREE.Vector3();
                 this.speed = 0;
                 this.angle = Math.random() * Math.PI * 2;
-                
-                this.maxSpeed = isPlayer ? 55 : 40;
+
+                this.maxSpeed = 55;
                 this.accel = 35;
                 this.handling = 2.5;
-                
+
                 this.hp = 100;
                 this.energy = 100;
                 this.lastShot = 0;
+                this.spawnTime = -Infinity;
 
-                // AI specifics
-                this.aiState = 'wander';
-                this.targetAngle = this.angle;
-                this.aiTimer = 0;
+                if (this.isRemote) {
+                    // Latest server snapshot; rendered position eases toward it
+                    this.net = { x, z, a: this.angle, s: 0, t: performance.now() };
+                    this.name = name;
+                    this.label = createNameLabel();
+                    this.mesh.add(this.label);
+                    drawNameLabel(this.label, name, this.hp);
+                }
             }
 
             update(dt) {
+                if (this.isRemote) {
+                    this.updateRemote(dt);
+                } else {
+                    this.updateLocal(dt);
+                }
+
+                const forward = new THREE.Vector3(Math.sin(this.angle), 0, Math.cos(this.angle));
+
+                // Terrain Following
+                const targetY = getElevation(this.pos.x, this.pos.z);
+                this.pos.y = targetY;
+                this.mesh.position.copy(this.pos);
+
+                // Orientation on hills
+                const normal = getTerrainNormal(this.pos.x, this.pos.z);
+
+                // Project forward vector onto terrain plane
+                const projForward = forward.clone().projectOnPlane(normal).normalize();
+                const right = new THREE.Vector3().crossVectors(normal, projForward).normalize();
+
+                const rotMatrix = new THREE.Matrix4();
+                rotMatrix.makeBasis(right, normal, projForward);
+
+                // Smooth rotation
+                const targetQuat = new THREE.Quaternion().setFromRotationMatrix(rotMatrix);
+                this.mesh.quaternion.slerp(targetQuat, 15 * dt);
+
+                // Spin LiDAR
+                this.mesh.userData.turret.rotation.y += 10 * dt;
+            }
+
+            updateLocal(dt) {
                 // Energy regen
                 this.energy = Math.min(100, this.energy + 25 * dt);
 
-                if (this.isPlayer) {
-                    this.handlePlayerInput(dt);
-                } else {
-                    this.handleAI(dt);
-                }
+                this.handlePlayerInput(dt);
 
                 // Physics & Movement
                 // Apply friction
@@ -725,7 +914,7 @@
 
                 // Calculate velocity vector
                 const forward = new THREE.Vector3(Math.sin(this.angle), 0, Math.cos(this.angle));
-                
+
                 // Proposed new position
                 const nextX = this.pos.x + forward.x * this.speed * dt;
                 const nextZ = this.pos.z + forward.z * this.speed * dt;
@@ -738,35 +927,44 @@
                         this.pos.z = nextZ;
                     } else {
                         this.speed *= -0.5; // Bounce off building
-                        if (this.isPlayer) sound.playHit();
-                        this.aiTimer = 0; // Force AI to rethink
+                        sound.playHit();
                     }
                 } else {
                     this.speed *= -0.5;
                     this.angle += Math.PI; // Turn around at edge
                 }
+            }
 
-                // Terrain Following
-                const targetY = getElevation(this.pos.x, this.pos.z);
-                this.pos.y = targetY;
-                this.mesh.position.copy(this.pos);
+            updateRemote(dt) {
+                const n = this.net;
+                // Dead-reckon briefly past the last snapshot so motion stays smooth between packets
+                if (performance.now() - n.t < 250) {
+                    n.x += Math.sin(n.a) * n.s * dt;
+                    n.z += Math.cos(n.a) * n.s * dt;
+                }
+                const dx = n.x - this.pos.x;
+                const dz = n.z - this.pos.z;
+                if (dx * dx + dz * dz > 40 * 40) {
+                    // Respawn or big correction: snap instead of sliding across the map
+                    this.pos.x = n.x;
+                    this.pos.z = n.z;
+                    this.angle = n.a;
+                } else {
+                    const k = 1 - Math.exp(-12 * dt);
+                    this.pos.x += dx * k;
+                    this.pos.z += dz * k;
+                    this.angle += normalizeAngle(n.a - this.angle) * k;
+                }
+                this.speed = n.s;
+            }
 
-                // Orientation on hills
-                const normal = getTerrainNormal(this.pos.x, this.pos.z);
-                
-                // Project forward vector onto terrain plane
-                const projForward = forward.clone().projectOnPlane(normal).normalize();
-                const right = new THREE.Vector3().crossVectors(normal, projForward).normalize();
-                
-                const rotMatrix = new THREE.Matrix4();
-                rotMatrix.makeBasis(right, normal, projForward);
-                
-                // Smooth rotation
-                const targetQuat = new THREE.Quaternion().setFromRotationMatrix(rotMatrix);
-                this.mesh.quaternion.slerp(targetQuat, 15 * dt);
+            applySnapshot(x, z, a, s) {
+                Object.assign(this.net, { x, z, a, s, t: performance.now() });
+            }
 
-                // Spin LiDAR
-                this.mesh.userData.turret.rotation.y += 10 * dt;
+            setHp(hp) {
+                this.hp = hp;
+                if (this.label) drawNameLabel(this.label, this.name, hp);
             }
 
             handlePlayerInput(dt) {
@@ -782,7 +980,7 @@
 
                 if (keys.w) this.speed += this.accel * dt;
                 if (keys.s) this.speed -= this.accel * dt;
-                
+
                 this.speed = THREE.MathUtils.clamp(this.speed, -currentMax * 0.5, currentMax);
 
                 // Steering (only when moving)
@@ -796,67 +994,6 @@
                 if (keys.space) this.shoot();
 
                 sound.updateEngine(this.speed / this.maxSpeed);
-            }
-
-            handleAI(dt) {
-                this.aiTimer -= dt;
-                
-                // Find nearest target (Player or other bot)
-                let nearestDist = 9999;
-                let target = null;
-
-                // Check player
-                if (player) {
-                    const d = this.pos.distanceTo(player.pos);
-                    if (d < nearestDist) { nearestDist = d; target = player; }
-                }
-                // Check other bots
-                bots.forEach(b => {
-                    if (b !== this) {
-                        const d = this.pos.distanceTo(b.pos);
-                        if (d < nearestDist) { nearestDist = d; target = b; }
-                    }
-                });
-
-                if (target && nearestDist < 120) {
-                    // Chase & Attack
-                    const dx = target.pos.x - this.pos.x;
-                    const dz = target.pos.z - this.pos.z;
-                    this.targetAngle = Math.atan2(dx, dz);
-
-                    // Shoot if lined up
-                    const angleDiff = Math.abs(this.normalizeAngle(this.angle - this.targetAngle));
-                    if (angleDiff < 0.3 && nearestDist < 90) {
-                        this.shoot();
-                    }
-                } else if (this.aiTimer <= 0) {
-                    // Wander along grid (mostly 90 degree turns)
-                    const dirs = [0, Math.PI/2, Math.PI, -Math.PI/2];
-                    this.targetAngle = dirs[Math.floor(Math.random() * dirs.length)] + (Math.random()*0.2 - 0.1);
-                    this.aiTimer = 2 + Math.random() * 3;
-                }
-
-                // Raycast/Lookahead for buildings
-                const lookAheadDist = 12;
-                const lookX = this.pos.x + Math.sin(this.angle) * lookAheadDist;
-                const lookZ = this.pos.z + Math.cos(this.angle) * lookAheadDist;
-                if (this.checkBuildingCollision(lookX, lookZ)) {
-                    this.targetAngle += Math.PI / 2;
-                    this.speed *= 0.8;
-                }
-
-                // Steer towards targetAngle
-                const diff = this.normalizeAngle(this.targetAngle - this.angle);
-                this.angle += Math.sign(diff) * Math.min(Math.abs(diff), this.handling * dt);
-
-                this.speed += this.accel * 0.8 * dt;
-                this.speed = Math.min(this.speed, this.maxSpeed);
-            }
-
-            normalizeAngle(a) {
-                while (a > Math.PI) a -= Math.PI * 2;
-                while (a < -Math.PI) a += Math.PI * 2;
-                return a;
             }
 
             checkBuildingCollision(x, z) {
@@ -873,10 +1010,10 @@
             shoot() {
                 const now = clock.getElapsedTime();
                 if (now - this.lastShot < 0.25 || this.energy < 15) return;
-                
+
                 this.lastShot = now;
                 this.energy -= 15;
-                sound.playLaser(this.isPlayer);
+                sound.playLaser(true);
 
                 // Spawn laser from LiDAR dome
                 const spawnPos = this.pos.clone();
@@ -891,9 +1028,7 @@
                 let bestTarget = null;
                 let minAngle = 0.25; // Cone of ~15 degrees
 
-                const potentialTargets = this.isPlayer ? bots : [player, ...bots.filter(b => b !== this)];
-                potentialTargets.forEach(t => {
-                    if (!t) return;
+                remoteVehicles.forEach(t => {
                     const toTarget = t.pos.clone().sub(this.pos);
                     const dist = toTarget.length();
                     if (dist < 120) {
@@ -915,50 +1050,18 @@
                 }
 
                 lasers.push(new Laser(spawnPos, dir, this));
-            }
-
-            takeDamage(amount, attacker) {
-                this.hp -= amount;
-                createParticles(this.pos.clone().add(new THREE.Vector3(0,1,0)), this.isPlayer ? 0x00f0ff : 0xff0055, 10, 5);
-                
-                if (this.isPlayer) {
-                    sound.playHit();
-                    const flash = document.getElementById('damage-flash');
-                    flash.style.opacity = 1;
-                    setTimeout(() => flash.style.opacity = 0, 150);
-                }
-
-                if (this.hp <= 0) {
-                    this.die(attacker);
-                }
-            }
-
-            die(attacker) {
-                sound.playExplosion();
-                createParticles(this.pos.clone().add(new THREE.Vector3(0,1,0)), 0xffaa00, 40, 15);
-                createParticles(this.pos.clone().add(new THREE.Vector3(0,1,0)), 0x00f0ff, 20, 10);
-
-                if (this.isPlayer) {
-                    addKillFeed("SYSTEM FAILURE: Your Waymo was tagged out!");
-                    this.respawn();
-                } else {
-                    if (attacker && attacker.isPlayer) {
-                        score++;
-                        document.getElementById('score-val').innerText = score;
-                        addKillFeed(`Tagged Rogue Waymo #${Math.floor(Math.random()*900+100)}!`);
-                        // Heal player slightly on kill
-                        player.hp = Math.min(100, player.hp + 25);
-                    } else {
-                        addKillFeed(`Waymo Unit tagged another Waymo Unit`);
-                    }
-                    this.respawn();
-                }
+                netSend({
+                    type: 'shoot',
+                    p: [spawnPos.x, spawnPos.y, spawnPos.z],
+                    d: [dir.x, dir.y, dir.z],
+                });
             }
 
             respawn() {
                 this.hp = 100;
                 this.energy = 100;
                 this.speed = 0;
+                this.spawnTime = clock.getElapsedTime();
                 // Find valid street position
                 const gx = Math.floor(Math.random() * (GRID_STEPS - 2)) + 1;
                 const gz = Math.floor(Math.random() * (GRID_STEPS - 2)) + 1;
@@ -966,6 +1069,14 @@
                 this.pos.z = -OFFSET + gz * CELL_SIZE + STREET_WIDTH / 2;
                 if (this.pos.x > 350) this.pos.x = 0; // Keep out of bay
                 this.pos.y = getElevation(this.pos.x, this.pos.z);
+            }
+
+            destroy() {
+                scene.remove(this.mesh);
+                if (this.label) {
+                    this.label.material.map.dispose();
+                    this.label.material.dispose();
+                }
             }
         }
 
@@ -982,7 +1093,7 @@
                 const color = owner.isPlayer ? 0x00ff88 : 0xff0055;
                 const mat = new THREE.MeshBasicMaterial({ color: color });
                 this.mesh = new THREE.Mesh(geo, mat);
-                
+
                 this.mesh.position.copy(this.pos);
                 this.mesh.lookAt(this.pos.clone().add(this.dir));
                 scene.add(this.mesh);
@@ -1010,16 +1121,23 @@
                     }
                 }
 
-                // Check vehicle collision
-                const targets = this.owner.isPlayer ? bots : [player, ...bots.filter(b => b !== this.owner)];
+                // Check vehicle collision. Only our own lasers report hits; the server
+                // decides damage. Other players' lasers just stop visually on impact.
+                const targets = [...remoteVehicles];
+                if (gameActive) targets.push(player);
+                const now = clock.getElapsedTime();
                 for (let t of targets) {
-                    if (!t) continue;
+                    if (t === this.owner) continue;
                     // Simple bounding sphere/cylinder check
                     const dx = this.pos.x - t.pos.x;
                     const dz = this.pos.z - t.pos.z;
                     const dy = this.pos.y - (t.pos.y + 1.0);
                     if (dx*dx + dz*dz < 4.5 && Math.abs(dy) < 1.5) {
-                        t.takeDamage(25, this.owner);
+                        const shielded = now - t.spawnTime < SPAWN_PROTECTION;
+                        createParticles(this.pos, shielded ? 0x8888ff : 0xffaa00, 6, 4);
+                        if (this.owner === player && t.isRemote && !shielded) {
+                            netSend({ type: 'hit', target: t.id });
+                        }
                         return false;
                     }
                 }
@@ -1180,10 +1298,10 @@
                         // 1 or 2 big skyscrapers per block
                         const w = BLOCK_SIZE - 16;
                         const d = BLOCK_SIZE - 16;
-                        const h = 50 + Math.random() * 90;
+                        const h = 50 + cityRandom() * 90;
                         
                         const bGeo = new THREE.BoxGeometry(w, h + 30, d);
-                        const tex = bTextures[Math.floor(Math.random() * bTextures.length)];
+                        const tex = bTextures[Math.floor(cityRandom() * bTextures.length)];
                         const bMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.2, metalness: 0.3 });
                         
                         const bMesh = new THREE.Mesh(bGeo, bMat);
@@ -1202,10 +1320,10 @@
                                 const hx = bx + sx * (subSize + 4);
                                 const hz = bz + sz * (subSize + 4);
                                 const hy = getElevation(hx, hz);
-                                const hh = 15 + Math.random() * 15;
+                                const hh = 15 + cityRandom() * 15;
 
                                 const hGeo = new THREE.BoxGeometry(subSize, hh + 20, subSize);
-                                const color = victorianColors[Math.floor(Math.random() * victorianColors.length)];
+                                const color = victorianColors[Math.floor(cityRandom() * victorianColors.length)];
                                 const hMat = new THREE.MeshStandardMaterial({ 
                                     color: color, 
                                     map: bTextures[0],
@@ -1287,17 +1405,244 @@
             scene.add(bridgeGroup);
         }
 
+        // --- NETWORKING ---
+        function netSend(msg) {
+            if (connected && myId !== null) ws.send(JSON.stringify(msg));
+        }
+
+        function setConnStatus(text, color) {
+            document.getElementById('conn-status').textContent = text;
+            document.getElementById('lb-online').style.setProperty('--dot', color);
+        }
+
+        function connect() {
+            setConnStatus('Connecting to server… (can take ~30s if it was asleep)', '#ccaa00');
+            renderLeaderboard();
+            ws = new WebSocket(SERVER_URL);
+
+            ws.onopen = () => {
+                connected = true;
+                setConnStatus('Connected', '#00ff88');
+                if (gameActive) ws.send(JSON.stringify({ type: 'join', name: myName }));
+            };
+
+            ws.onmessage = (e) => {
+                let msg;
+                try { msg = JSON.parse(e.data); } catch { return; }
+                const handler = netHandlers[msg.type];
+                if (handler) handler(msg);
+            };
+
+            ws.onclose = () => {
+                const wasConnected = connected;
+                connected = false;
+                myId = null;
+                clearRoster();
+                setConnStatus('Disconnected. Retrying…', '#cc2244');
+                if (wasConnected) addKillFeed('Lost connection to server. Reconnecting…');
+                setTimeout(connect, 2000);
+            };
+        }
+
+        function addRosterPlayer(p) {
+            if (roster.has(p.id)) return roster.get(p.id);
+            const entry = { id: p.id, name: p.name, kills: p.kills, deaths: p.deaths, vehicle: null };
+            if (p.id !== myId) {
+                const v = new Vehicle(p.x, p.z, false, p.name);
+                v.id = p.id;
+                v.angle = p.a;
+                v.pos.set(p.x, getElevation(p.x, p.z), p.z);
+                v.applySnapshot(p.x, p.z, p.a, p.s);
+                v.setHp(p.hp);
+                entry.vehicle = v;
+                remoteVehicles.add(v);
+            }
+            roster.set(p.id, entry);
+            return entry;
+        }
+
+        function removeRosterPlayer(id) {
+            const entry = roster.get(id);
+            if (!entry) return;
+            if (entry.vehicle) {
+                entry.vehicle.destroy();
+                remoteVehicles.delete(entry.vehicle);
+            }
+            roster.delete(id);
+        }
+
+        function clearRoster() {
+            [...roster.keys()].forEach(removeRosterPlayer);
+            renderLeaderboard();
+        }
+
+        const netHandlers = {
+            welcome(msg) {
+                clearRoster();
+                msg.players.forEach(addRosterPlayer);
+                renderLeaderboard();
+            },
+
+            joined(msg) {
+                myId = msg.id;
+                myName = msg.name;
+                updateMyStats();
+            },
+
+            join(msg) {
+                const entry = addRosterPlayer(msg.player);
+                if (entry.vehicle) {
+                    entry.vehicle.spawnTime = clock.getElapsedTime();
+                    if (gameActive) addKillFeed(`${entry.name} joined the fleet`);
+                }
+                renderLeaderboard();
+            },
+
+            leave(msg) {
+                removeRosterPlayer(msg.id);
+                renderLeaderboard();
+            },
+
+            snap(msg) {
+                for (const [id, x, z, a, s, hp] of msg.p) {
+                    if (id === myId) {
+                        player.hp = hp;
+                        continue;
+                    }
+                    const v = roster.get(id)?.vehicle;
+                    if (!v) continue;
+                    v.applySnapshot(x, z, a, s);
+                    if (v.hp !== hp) v.setHp(hp);
+                }
+            },
+
+            shoot(msg) {
+                const v = roster.get(msg.id)?.vehicle;
+                if (!v) return;
+                const pos = new THREE.Vector3(...msg.p);
+                lasers.push(new Laser(pos, new THREE.Vector3(...msg.d), v));
+                if (gameActive && pos.distanceTo(player.pos) < 150) sound.playLaser(false);
+            },
+
+            hp(msg) {
+                if (msg.id === myId) {
+                    const tookDamage = msg.hp < player.hp;
+                    player.hp = msg.hp;
+                    if (tookDamage) {
+                        createParticles(player.pos.clone().add(new THREE.Vector3(0,1,0)), 0x00f0ff, 10, 5);
+                        sound.playHit();
+                        const flash = document.getElementById('damage-flash');
+                        flash.style.opacity = 1;
+                        setTimeout(() => flash.style.opacity = 0, 150);
+                    }
+                    return;
+                }
+                const v = roster.get(msg.id)?.vehicle;
+                if (!v) return;
+                if (msg.hp < v.hp) {
+                    createParticles(v.pos.clone().add(new THREE.Vector3(0,1,0)), 0xff0055, 10, 5);
+                }
+                v.setHp(msg.hp);
+            },
+
+            kill(msg) {
+                const killer = roster.get(msg.killer);
+                const victim = roster.get(msg.victim);
+                if (killer) killer.kills = msg.killerKills;
+                if (victim) victim.deaths = msg.victimDeaths;
+
+                const victimVehicle = msg.victim === myId ? player : victim?.vehicle;
+                if (victimVehicle && (gameActive || victimVehicle !== player)) {
+                    const at = victimVehicle.pos.clone().add(new THREE.Vector3(0,1,0));
+                    createParticles(at, 0xffaa00, 40, 15);
+                    createParticles(at, 0x00f0ff, 20, 10);
+                    if (gameActive && at.distanceTo(player.pos) < 200) sound.playExplosion();
+                }
+
+                const killerName = killer?.name ?? 'Someone';
+                const victimName = victim?.name ?? 'someone';
+                if (msg.victim === myId) {
+                    addKillFeed(`SYSTEM FAILURE: ${killerName} tagged you out!`);
+                    player.respawn();
+                } else if (msg.killer === myId) {
+                    addKillFeed(`You tagged ${victimName}!`);
+                } else if (gameActive) {
+                    addKillFeed(`${killerName} tagged ${victimName}`);
+                }
+                if (victim?.vehicle) victim.vehicle.spawnTime = clock.getElapsedTime();
+
+                updateMyStats();
+                renderLeaderboard();
+            },
+        };
+
+        function sendState() {
+            if (!gameActive) return;
+            netSend({
+                type: 'state',
+                x: +player.pos.x.toFixed(2),
+                z: +player.pos.z.toFixed(2),
+                a: +player.angle.toFixed(3),
+                s: +player.speed.toFixed(2),
+            });
+        }
+
+        function renderLeaderboard() {
+            const header = document.getElementById('lb-online');
+            const rows = document.getElementById('lb-rows');
+            if (!connected) {
+                header.textContent = 'Connecting…';
+                rows.replaceChildren();
+                return;
+            }
+            const n = roster.size;
+            header.textContent = `${n} player${n === 1 ? '' : 's'} online`;
+
+            const sorted = [...roster.values()].sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
+            const shown = sorted.slice(0, 10);
+            const meIndex = sorted.findIndex(p => p.id === myId);
+            if (meIndex >= 10) shown.push(sorted[meIndex]);
+
+            rows.replaceChildren(...shown.map(p => {
+                const row = document.createElement('div');
+                row.className = 'lb-row' + (p.id === myId ? ' me' : '');
+                const rank = document.createElement('span');
+                rank.className = 'rank';
+                rank.textContent = sorted.indexOf(p) + 1;
+                const name = document.createElement('span');
+                name.className = 'name';
+                name.textContent = p.name;
+                const kills = document.createElement('span');
+                kills.className = 'kills';
+                kills.textContent = p.kills;
+                row.append(rank, name, kills);
+                return row;
+            }));
+            if (shown.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'lb-empty';
+                empty.textContent = 'No one driving yet. Be the first!';
+                rows.append(empty);
+            }
+        }
+
+        function updateMyStats() {
+            const me = roster.get(myId);
+            document.getElementById('score-val').innerText = me ? me.kills : 0;
+            document.getElementById('deaths-val').innerText = me ? me.deaths : 0;
+        }
+
         // --- INITIALIZATION & LOOP ---
         function init() {
             const container = document.getElementById('canvas-container');
-            
+
             scene = new THREE.Scene();
             // Golden Hour / Cyberpunk Dusk Sky & Fog
             scene.background = new THREE.Color(0x151025);
             scene.fog = new THREE.FogExp2(0x151025, 0.0018);
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            
+
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -1340,18 +1685,10 @@
             // Build World
             buildSanFrancisco();
 
-            // Spawn Player
+            // Spawn Player (hidden until they press Start)
             player = new Vehicle(-50, 50, true);
             player.respawn();
-
-            // Spawn Autonomous Fleet (Bots)
-            const botCount = 15;
-            for (let i = 0; i < botCount; i++) {
-                const bot = new Vehicle(0, 0, false);
-                bot.respawn();
-                bots.push(bot);
-            }
-            document.getElementById('bots-val').innerText = botCount + 1;
+            player.mesh.visible = false;
 
             // Event Listeners
             window.addEventListener('resize', onWindowResize);
@@ -1360,15 +1697,38 @@
             window.addEventListener('mousedown', () => { if(gameActive) keys.space = true; });
             window.addEventListener('mouseup', () => keys.space = false);
 
-            document.getElementById('start-btn').addEventListener('click', () => {
-                document.getElementById('overlay').style.display = 'none';
-                sound.init();
-                gameActive = true;
-                addKillFeed("SYSTEM ONLINE: Autonomous Laser Tag Engaged.");
+            // Start modal
+            const nameInput = document.getElementById('name-input');
+            try { nameInput.value = localStorage.getItem('waymoworld-name') || ''; } catch {}
+            nameInput.focus();
+            nameInput.addEventListener('keydown', e => {
+                e.stopPropagation(); // typing a name shouldn't drive the car
+                if (e.key === 'Enter') startGame();
             });
+            nameInput.addEventListener('keyup', e => e.stopPropagation());
+            document.getElementById('start-btn').addEventListener('click', startGame);
+
+            connect();
+            setInterval(sendState, STATE_SEND_MS);
 
             // Start Loop
             animate();
+        }
+
+        function startGame() {
+            if (gameActive) return;
+            const nameInput = document.getElementById('name-input');
+            myName = nameInput.value.trim().slice(0, 16);
+            try { localStorage.setItem('waymoworld-name', myName); } catch {}
+            nameInput.blur();
+
+            document.getElementById('overlay').style.display = 'none';
+            sound.init();
+            player.respawn();
+            player.mesh.visible = true;
+            gameActive = true;
+            addKillFeed("SYSTEM ONLINE: Autonomous Laser Tag Engaged.");
+            if (connected) ws.send(JSON.stringify({ type: 'join', name: myName }));
         }
 
         function handleKey(e, isDown) {
@@ -1379,6 +1739,7 @@
             if (code === 'KeyD' || code === 'ArrowRight') keys.d = isDown;
             if (code === 'Space') keys.space = isDown;
             if (code === 'ShiftLeft' || code === 'ShiftRight') keys.shift = isDown;
+            if (gameActive && (code === 'Space' || code.startsWith('Arrow'))) e.preventDefault();
         }
 
         function onWindowResize() {
@@ -1402,7 +1763,7 @@
         function updateHUD() {
             if (!player) return;
             document.getElementById('speed-val').innerText = Math.floor(Math.abs(player.speed) * 1.5);
-            
+
             const hpPct = Math.max(0, Math.floor(player.hp));
             document.getElementById('health-bar').style.width = hpPct + '%';
             document.getElementById('hp-text').innerText = hpPct + '%';
@@ -1416,15 +1777,15 @@
             radarDots.innerHTML = '';
             const radarScale = 75 / 200; // 200 units range = 75px radius
 
-            bots.forEach(b => {
+            remoteVehicles.forEach(b => {
                 const dx = b.pos.x - player.pos.x;
                 const dz = b.pos.z - player.pos.z;
                 const dist = Math.sqrt(dx*dx + dz*dz);
-                
+
                 if (dist < 200) {
                     // Rotate relative to player heading
                     const angle = Math.atan2(dx, dz) - player.angle;
-                    const rx = Math.sin(angle) * dist * radarScale;
+                    const rx = -Math.sin(angle) * dist * radarScale;
                     const ry = -Math.cos(angle) * dist * radarScale; // -Y is up on screen
 
                     const dot = document.createElement('div');
@@ -1443,7 +1804,7 @@
 
         function updateCamera(dt) {
             if (!player) return;
-            
+
             // Chase camera calculation
             const forward = new THREE.Vector3(Math.sin(player.angle), 0, Math.cos(player.angle));
             const desiredPos = player.pos.clone()
@@ -1461,7 +1822,7 @@
             // Look ahead of the car
             const lookTarget = player.pos.clone()
                 .add(new THREE.Vector3(Math.sin(player.angle) * 15, 2.0, Math.cos(player.angle) * 15));
-            
+
             // Smooth lookAt
             const currentLook = new THREE.Vector3();
             camera.getWorldDirection(currentLook);
@@ -1472,49 +1833,41 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            
+
             const dt = Math.min(clock.getDelta(), 0.1);
+
+            // Other players are simulated even on the start modal, so the menu shows live traffic
+            remoteVehicles.forEach(v => v.update(dt));
 
             if (gameActive) {
                 player.update(dt);
-                bots.forEach(b => b.update(dt));
 
-                // Vehicle-to-Vehicle Collisions
-                const allVehicles = [player, ...bots];
-                for (let i = 0; i < allVehicles.length; i++) {
-                    for (let j = i + 1; j < allVehicles.length; j++) {
-                        const v1 = allVehicles[i];
-                        const v2 = allVehicles[j];
-                        const dx = v2.pos.x - v1.pos.x;
-                        const dz = v2.pos.z - v1.pos.z;
-                        const distSq = dx*dx + dz*dz;
-                        const minDist = 3.2;
-                        if (distSq < minDist * minDist && distSq > 0.001) {
-                            const dist = Math.sqrt(distSq);
-                            const overlap = (minDist - dist) * 0.5;
-                            const nx = dx / dist;
-                            const nz = dz / dist;
-                            v1.pos.x -= nx * overlap;
-                            v1.pos.z -= nz * overlap;
-                            v2.pos.x += nx * overlap;
-                            v2.pos.z += nz * overlap;
-                            // Bounce speeds slightly
-                            const temp = v1.speed;
-                            v1.speed = v2.speed * 0.8;
-                            v2.speed = temp * 0.8;
-                        }
+                // Vehicle-to-Vehicle Collisions: we only own our car, so only it gets pushed
+                const minDist = 3.2;
+                remoteVehicles.forEach(v => {
+                    const dx = player.pos.x - v.pos.x;
+                    const dz = player.pos.z - v.pos.z;
+                    const distSq = dx*dx + dz*dz;
+                    if (distSq < minDist * minDist && distSq > 0.001) {
+                        const dist = Math.sqrt(distSq);
+                        const overlap = minDist - dist;
+                        player.pos.x += (dx / dist) * overlap;
+                        player.pos.z += (dz / dist) * overlap;
+                        player.speed *= 0.5;
                     }
-                }
+                });
+            }
 
-                // Update Lasers
-                for (let i = lasers.length - 1; i >= 0; i--) {
-                    if (!lasers[i].update(dt)) {
-                        lasers[i].destroy();
-                        lasers.splice(i, 1);
-                    }
+            // Update Lasers
+            for (let i = lasers.length - 1; i >= 0; i--) {
+                if (!lasers[i].update(dt)) {
+                    lasers[i].destroy();
+                    lasers.splice(i, 1);
                 }
+            }
+            updateParticles(dt);
 
-                updateParticles(dt);
+            if (gameActive) {
                 updateCamera(dt);
                 updateHUD();
             } else {
