@@ -146,6 +146,7 @@ function renderPlayers(s) {
   $('players').replaceChildren(table([
     { label: 'id', get: p => p.id, num: true },
     { label: 'name', get: p => p.name },
+    { label: 'bot', get: p => p.bot ? 'yes' : '' },
     { label: 'hp', get: p => p.hp, num: true, cls: p => p.hp > 50 ? 'good' : p.hp > 25 ? 'warn' : 'bad' },
     { label: 'kills', get: p => p.kills, num: true },
     { label: 'deaths', get: p => p.deaths, num: true },

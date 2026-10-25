@@ -263,6 +263,7 @@
         .lb-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .lb-row .kills { font-weight: bold; color: #ff5588; }
         .lb-row.me .name { color: #00f0ff; font-weight: bold; }
+        .lb-row .name.bot { color: #a8b0c4; font-style: italic; }
         .lb-empty { color: #889; font-size: 12px; padding: 4px 0; }
         .key {
             background: #192231;
@@ -1518,6 +1519,9 @@
 
                         if (this.owner === player && t.isRemote && !shielded) {
                             netSend({ type: 'hit', target: t.id });
+                        } else if (t === player && this.owner.isBot && !shielded) {
+                            // Server bots can't see lasers, so the victim reports bot hits
+                            netSend({ type: 'botHit', bot: this.owner.id });
                         }
                         return false;
                     }
@@ -2376,10 +2380,11 @@
 
         function addRosterPlayer(p) {
             if (roster.has(p.id)) return roster.get(p.id);
-            const entry = { id: p.id, name: p.name, kills: p.kills, deaths: p.deaths, vehicle: null };
+            const entry = { id: p.id, name: p.name, kills: p.kills, deaths: p.deaths, bot: !!p.bot, vehicle: null };
             if (p.id !== myId) {
                 const v = new Vehicle(p.x, p.z, false, p.name);
                 v.id = p.id;
+                v.isBot = !!p.bot;
                 v.angle = p.a;
                 v.pos.set(p.x, getElevation(p.x, p.z), p.z);
                 v.applySnapshot(p.x, p.z, p.a, p.s);
@@ -2526,8 +2531,10 @@
                 rows.replaceChildren();
                 return;
             }
-            const n = roster.size;
-            header.textContent = `${n} player${n === 1 ? '' : 's'} online`;
+            const everyone = [...roster.values()];
+            const n = everyone.filter(p => !p.bot).length;
+            const nBots = everyone.length - n;
+            header.textContent = `${n} player${n === 1 ? '' : 's'} online` + (nBots ? ` · ${nBots} bots` : '');
 
             const sorted = [...roster.values()].sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
             const shown = sorted.slice(0, 10);
@@ -2543,6 +2550,7 @@
                 const name = document.createElement('span');
                 name.className = 'name';
                 name.textContent = p.name;
+                if (p.bot) name.classList.add('bot');
                 const kills = document.createElement('span');
                 kills.className = 'kills';
                 kills.textContent = p.kills;
