@@ -143,7 +143,7 @@ We have an API key for Gemini 4.
 | `out/` | Argon loop | baseline and loop iterations |
 
 Argon loop work happens on the `loop` branch and merges into `main` at the end.
-Don't delete other people's paths; `git pull --rebase` before pushing; never force-push `main`.
+Don't delete other people's paths. Before pushing: `git pull --rebase` for unpushed local commits, but on an already-pushed branch (e.g. `loop`) use `git merge origin/main` instead of rebasing. Never force-push.
 
 ## Accounts & Setup
 
