@@ -1,0 +1,37 @@
+[
+  {
+    "iter": 0,
+    "accepted": true,
+    "total": 26.5,
+    "scores": {
+      "waymo_look": 6.0,
+      "sf_realism": 4.0,
+      "laser_tag_fun": 5.5,
+      "driving_feel": 4.0,
+      "visual_polish": 3.0,
+      "sf_landmarks": 4.0
+    },
+    "errors": 0
+  },
+  {
+    "iter": 1,
+    "accepted": true,
+    "total": 32.5,
+    "scores": {
+      "waymo_look": 5.5,
+      "sf_realism": 5.5,
+      "laser_tag_fun": 6.0,
+      "driving_feel": 7.0,
+      "visual_polish": 4.5,
+      "sf_landmarks": 4.0
+    },
+    "errors": 0,
+    "fps": 23,
+    "too_slow": false,
+    "seconds": 419,
+    "in": 125996,
+    "out": 39363,
+    "edits_applied": 1,
+    "edits_total": 1
+  }
+]

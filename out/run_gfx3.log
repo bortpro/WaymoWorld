@@ -1,0 +1,4 @@
+builder refs: 10, critic refs: 5
+iter 0: total 26.5 {'waymo_look': 6.0, 'sf_realism': 4.0, 'laser_tag_fun': 5.5, 'driving_feel': 4.0, 'visual_polish': 3.0, 'sf_landmarks': 4.0} errors 0
+iter 1: ACCEPT total 32.5 {'waymo_look': 5.5, 'sf_realism': 5.5, 'laser_tag_fun': 6.0, 'driving_feel': 7.0, 'visual_polish': 4.5, 'sf_landmarks': 4.0} errors 0 edits 1/1 419s
+best: out/run_gfx3/iter_1 total 32.5

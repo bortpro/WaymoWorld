@@ -1,0 +1,72 @@
+{
+  "scores": {
+    "waymo_look": 6.0,
+    "sf_realism": 4.0,
+    "laser_tag_fun": 5.5,
+    "driving_feel": 4.0,
+    "visual_polish": 3.0,
+    "sf_landmarks": 4.0
+  },
+  "summary": "A playable prototype with recognizable low-poly Waymo cars, hilly SF streets, and active laser tag combat, but heavily penalized by thick washed-out fog, landmarks placed inside the street grid, and broken building collision where the player car clips halfway inside a blinding white wall.",
+  "top_issues": [
+    {
+      "criterion": "visual_polish",
+      "issue": "Thick white fog/haze washes out the entire scene and ruins contrast, directly violating the sunny clear daytime visual goal.",
+      "evidence": "Screenshots 0-4 show heavy white distance fog starting just a couple of blocks away, washing out buildings and landmarks.",
+      "fix_hint": "Remove scene.fog or drastically increase its far distance, and use a crisp blue skybox with strong directional sunlight and shadows."
+    },
+    {
+      "criterion": "driving_feel",
+      "issue": "Broken building collision and camera clipping: the car drives halfway inside an untextured, blindingly white building wall and slides along it.",
+      "evidence": "Video 00:29-00:35 and Screenshot 5 show the right half of the player car embedded inside a pure white building mesh blocking half the screen.",
+      "fix_hint": "Ensure all building meshes have proper AABB/box colliders that push the car out cleanly without letting the vehicle or camera clip inside, and fix overexposed white wall materials."
+    },
+    {
+      "criterion": "sf_landmarks",
+      "issue": "Landmarks are placed directly inside the city street grid rather than in their realistic geographic locations.",
+      "evidence": "Screenshots 3 and 4 (and Video 00:16-00:22) show a red Golden Gate Bridge tower/cable structure and the Transamerica Pyramid sitting directly on a residential street corner.",
+      "fix_hint": "Place the Golden Gate Bridge and Bay Bridge over water outside the street grid perimeter, and group downtown skyscrapers (Transamerica, Salesforce) in a dedicated financial district."
+    },
+    {
+      "criterion": "sf_realism",
+      "issue": "Low-poly lollipop trees and blocky pastel buildings lack San Francisco architectural detail, and some bushes/trees sit in the middle of the road.",
+      "evidence": "Screenshot 0 and 1 show green bushes/trees sitting in the roadway at the crest of the hill; Screenshot 4 and 5 show simple sphere-on-cylinder trees and flat-shaded buildings.",
+      "fix_hint": "Remove all vegetation from roadways, use more detailed tree models on sidewalks, and add authentic Victorian bay window profiles, cornices, and varied facade textures."
+    },
+    {
+      "criterion": "waymo_look",
+      "issue": "The Waymo vehicle model is a boxy low-poly sedan rather than a sleek sloped-roof Jaguar I-PACE SUV.",
+      "evidence": "Screenshots 0-4 show the player car from behind with a squared-off trunk and boxy cabin, though it does include the roof lidar dome, corner sensors, and 'W' logo.",
+      "fix_hint": "Refine the car mesh to match the Jaguar I-PACE coupe-SUV silhouette with a fastback sloped rear window, wider fenders, and clearer Waymo door branding."
+    },
+    {
+      "criterion": "visual_polish",
+      "issue": "Heavy white fog/haze and overexposed lighting wash out the entire scene, directly violating the clear sunny daytime requirement.",
+      "evidence": "Screenshots 0-5 all show thick white distance fog starting just a block away, washing out the Golden Gate Bridge and buildings into near-solid white.",
+      "fix_hint": "Remove scene.fog completely or push far distance much further back, reduce ambient/hemisphere light intensity, and use a crisp blue skybox with high-contrast directional sunlight."
+    },
+    {
+      "criterion": "driving_feel",
+      "issue": "Buildings lack proper collision detection, allowing the player car to drive straight inside building geometry and blinding the camera.",
+      "evidence": "Video 00:28-00:35 and Screenshot 5 show the car driving onto the sidewalk and clipping half-way inside a bright white building wall, blocking 60% of the camera view.",
+      "fix_hint": "Add AABB or box collider checks for all city block buildings so the car bounces or slides along walls instead of penetrating them, and add camera collision raycasting."
+    },
+    {
+      "criterion": "sf_realism",
+      "issue": "Landmarks and props are placed directly inside the roadway and street grid rather than in realistic locations.",
+      "evidence": "Screenshot 0-2 show bushes/planters sitting in the middle of the road at the top of the hill, and Screenshot 3 shows a giant red Golden Gate Bridge tower base standing directly on a city sidewalk/street corner.",
+      "fix_hint": "Move the Golden Gate Bridge outside the city street grid over a bay water plane to the north/west, and keep all planters, trees, and props strictly on sidewalks or medians."
+    }
+  ],
+  "total": 26.5,
+  "usage": {
+    "in": 7301,
+    "out": 807
+  },
+  "sample_totals": [
+    26.5,
+    26
+  ],
+  "errors": 0,
+  "fps": 27
+}

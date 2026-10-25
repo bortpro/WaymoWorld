@@ -61,8 +61,9 @@ NO FOG ANYWHERE: scene.fog = null, no fog layers, no haze, no fog around landmar
    sky via PMREMGenerator so paint, glass and slightly wet asphalt reflect it. One directional sun with soft
    PCFSoft shadows whose shadow camera follows the player (tight frustum). Hemisphere fill light.
    GTAOPass ambient occlusion for contact shadows where buildings meet the street. Restrained
-   post-processing: UnrealBloomPass strength <= 0.3, threshold >= 0.85 (only lasers/headlights/emissives
-   glow), SMAA or FXAA anti-aliasing, mild colour grading, OutputPass. Never washed out.
+   post-processing: NO UnrealBloomPass in daytime (with OutputPass the composer works in linear HDR, so
+   sunlit surfaces exceed any bloom threshold and the whole frame hazes over); make lasers read through
+   bright emissive/basic materials instead. SMAA or FXAA anti-aliasing, mild colour grading, OutputPass.
 2. Landmarks (simple shapes, deterministic placement, visible from the hills):
    - Golden Gate Bridge: International Orange towers, catenary cables as curved tubes, deck. Place it ONLY at
      the map boundary over water (beyond the north edge of the city), never inside the street grid.
@@ -88,7 +89,7 @@ NO FOG ANYWHERE: scene.fog = null, no fog layers, no haze, no fog around landmar
    plane instead of fog."""
 
 LOOK = """LOOK: clear, sunny SF daytime with crisp contrast, like the TARGET LOOK screenshots if provided.
-No fog or haze of any kind; bloom only on lasers/emissives; no overexposed sky or buildings."""
+No fog or haze of any kind; no bloom pass in daytime; no overexposed sky or buildings."""
 
 MP_CONTRACT = """MULTIPLAYER CONTRACT (another developer owns networking; keep it working):
 Do not change networking code or message formats (SERVER_URL, ws, myId, connect, netSend, sendState, roster,
