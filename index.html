@@ -112,36 +112,13 @@
             background: linear-gradient(90deg, #ff0055, #ff00ff);
             transition: width 0.1s;
         }
-        #radar {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
+        #minimap {
+            width: 220px;
+            height: 220px;
+            border-radius: 10px;
             border: 2px solid #00f0ff;
-            background: rgba(0, 20, 40, 0.6);
-            position: relative;
-            overflow: hidden;
             box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
-        }
-        #radar::after {
-            content: '';
-            position: absolute;
-            top: 50%; left: 50%;
-            width: 6px; height: 6px;
-            background: #fff;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-        }
-        #radar-sweep {
-            position: absolute;
-            top: 50%; left: 50%;
-            width: 75px; height: 75px;
-            background: linear-gradient(45deg, rgba(0, 240, 255, 0.5) 0%, transparent 70%);
-            transform-origin: 0 0;
-            animation: sweep 2s infinite linear;
-        }
-        @keyframes sweep {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            display: block;
         }
         #crosshair {
             position: absolute;
@@ -397,10 +374,7 @@
                     <div class="bar-bg"><div id="energy-bar"></div></div>
                 </div>
             </div>
-            <div id="radar">
-                <div id="radar-sweep"></div>
-                <div id="radar-dots"></div>
-            </div>
+            <canvas id="minimap"></canvas>
         </div>
     </div>
 
@@ -1684,6 +1658,7 @@
 
             // Build World
             buildSanFrancisco();
+            buildMinimapBase();
 
             // Spawn Player (hidden until they press Start)
             player = new Vehicle(-50, 50, true);
@@ -1772,34 +1747,88 @@
             document.getElementById('energy-bar').style.width = enPct + '%';
             document.getElementById('en-text').innerText = enPct + '%';
 
-            // Radar Update
-            const radarDots = document.getElementById('radar-dots');
-            radarDots.innerHTML = '';
-            const radarScale = 75 / 200; // 200 units range = 75px radius
+            drawMinimap();
+        }
 
-            remoteVehicles.forEach(b => {
-                const dx = b.pos.x - player.pos.x;
-                const dz = b.pos.z - player.pos.z;
-                const dist = Math.sqrt(dx*dx + dz*dz);
+        // --- MINIMAP (whole city, north-up: world x → right, z → down) ---
+        const MINIMAP_SIZE = 220; // CSS px, matches #minimap
+        let minimapBase = null;   // pre-rendered static layer (bay + buildings)
 
-                if (dist < 200) {
-                    // Rotate relative to player heading
-                    const angle = Math.atan2(dx, dz) - player.angle;
-                    const rx = -Math.sin(angle) * dist * radarScale;
-                    const ry = -Math.cos(angle) * dist * radarScale; // -Y is up on screen
+        function mapPx(v) {
+            return (v + OFFSET) / (2 * OFFSET) * MINIMAP_SIZE;
+        }
 
-                    const dot = document.createElement('div');
-                    dot.style.position = 'absolute';
-                    dot.style.width = '5px';
-                    dot.style.height = '5px';
-                    dot.style.background = '#ff0055';
-                    dot.style.borderRadius = '50%';
-                    dot.style.boxShadow = '0 0 5px #ff0055';
-                    dot.style.left = (75 + rx - 2.5) + 'px';
-                    dot.style.top = (75 + ry - 2.5) + 'px';
-                    radarDots.appendChild(dot);
-                }
+        function buildMinimapBase() {
+            const dpr = Math.min(window.devicePixelRatio, 2);
+            const canvas = document.getElementById('minimap');
+            canvas.width = canvas.height = MINIMAP_SIZE * dpr;
+
+            const base = document.createElement('canvas');
+            base.width = base.height = MINIMAP_SIZE * dpr;
+            const ctx = base.getContext('2d');
+            ctx.scale(dpr, dpr);
+            ctx.fillStyle = 'rgba(0, 20, 40, 0.8)';
+            ctx.fillRect(0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
+            // Bay
+            ctx.fillStyle = 'rgba(0, 70, 120, 0.8)';
+            ctx.fillRect(mapPx(450), 0, MINIMAP_SIZE - mapPx(450), MINIMAP_SIZE);
+            // Buildings
+            ctx.fillStyle = 'rgba(130, 150, 190, 0.45)';
+            for (const b of buildings) {
+                ctx.fillRect(mapPx(b.minX), mapPx(b.minZ), mapPx(b.maxX) - mapPx(b.minX), mapPx(b.maxZ) - mapPx(b.minZ));
+            }
+            minimapBase = base;
+        }
+
+        function drawMinimap() {
+            const canvas = document.getElementById('minimap');
+            const ctx = canvas.getContext('2d');
+            const dpr = canvas.width / MINIMAP_SIZE;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
+            ctx.drawImage(minimapBase, 0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
+
+            // Other players: dot + name
+            ctx.font = 'bold 10px "Segoe UI", Tahoma, sans-serif';
+            ctx.textBaseline = 'middle';
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+            remoteVehicles.forEach(v => {
+                const x = mapPx(v.pos.x), y = mapPx(v.pos.z);
+                ctx.fillStyle = '#ff0055';
+                ctx.shadowColor = '#ff0055';
+                ctx.shadowBlur = 6;
+                ctx.beginPath();
+                ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                const w = ctx.measureText(v.name).width;
+                const onLeft = x + 6 + w > MINIMAP_SIZE - 2;
+                ctx.textAlign = onLeft ? 'right' : 'left';
+                const tx = onLeft ? x - 6 : x + 6;
+                const ty = THREE.MathUtils.clamp(y, 7, MINIMAP_SIZE - 7);
+                ctx.strokeText(v.name, tx, ty);
+                ctx.fillStyle = '#ffd0dc';
+                ctx.fillText(v.name, tx, ty);
             });
+
+            // Us: arrow pointing along our heading. Forward is (sin a, cos a) in (x, z),
+            // so rotating an up-pointing arrow clockwise by (PI - a) lines it up.
+            ctx.save();
+            ctx.translate(mapPx(player.pos.x), mapPx(player.pos.z));
+            ctx.rotate(Math.PI - player.angle);
+            ctx.fillStyle = '#00f0ff';
+            ctx.shadowColor = '#00f0ff';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.moveTo(0, -7);
+            ctx.lineTo(5, 5);
+            ctx.lineTo(0, 2.5);
+            ctx.lineTo(-5, 5);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
         }
 
         function updateCamera(dt) {
