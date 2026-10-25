@@ -137,9 +137,9 @@ to help craft the 3D world, that is ideal.
 
 - ~2.5 min, 193 input / ~17K output tokens, one 62 KB `index.html` (three.js + bloom), 0 console errors
 - Open `out/baseline_v0/index.html` in a browser to play (WASD, Space to fire, Shift to boost)
-- Screenshots: `out/baseline_v0/shot_*.png`
+- Screenshots + gameplay video: `out/baseline_v0/shot_*.png`, `play.mp4`
 
-![baseline](out/baseline_v0/shot_0.png)
+![baseline](out/baseline_v0/shot_3.png)
 
 Known gaps (targets for the render → critique → fix loop): car doesn't look like a Waymo, city
 doesn't read as SF, easy to get stuck on buildings, opponents rarely on screen, no Waymo imagery used.
