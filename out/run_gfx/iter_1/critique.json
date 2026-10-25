@@ -1,0 +1,15 @@
+{
+  "scores": {
+    "waymo_look": 0,
+    "sf_realism": 0,
+    "laser_tag_fun": 0,
+    "driving_feel": 0,
+    "visual_polish": 0,
+    "sf_landmarks": 0
+  },
+  "total": 0,
+  "failed": "load: Timeout 15000ms exceeded.",
+  "summary": "Game failed to render: load: Timeout 15000ms exceeded.",
+  "top_issues": [],
+  "errors": 0
+}

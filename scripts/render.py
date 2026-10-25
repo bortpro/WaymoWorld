@@ -114,7 +114,7 @@ def render(game_dir: Path) -> dict:
             page.on("pageerror", lambda e: logs.append({"type": "pageerror", "text": str(e)}))
             stage = "load"
             page.goto(page_path.as_uri() + QUERY, wait_until="commit")
-            page.wait_for_load_state("load")
+            page.wait_for_load_state("load", timeout=90_000)  # first fetch of new CDN addons can be slow
             page.wait_for_timeout(3000)
             stage = "start screenshot"
             page.screenshot(path=str(game_dir / "shot_start.png"))
