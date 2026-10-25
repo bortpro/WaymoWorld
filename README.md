@@ -50,6 +50,32 @@ Local WebSocket URL: `ws://localhost:8080/ws`
 - Clients send JSON; the server rebroadcasts each message unchanged to every other client.
 - If a message isn't valid JSON, the server replies `{ "type": "error", "error": "invalid JSON" }`.
 
+## Game state in `index.html`
+
+The world is 3D with **y pointing up**; cars drive on the **x–z plane**. State lives in module-level globals: `player`, `bots[]`, `lasers[]`, `particles[]`, `buildings[]` (collision boxes `{minX,maxX,minZ,maxZ,maxY}`), `score`, and `keys` (input).
+
+### Car (`class Vehicle`)
+
+| Field | What it's for | Send over the network? |
+|---|---|---|
+| `pos.x`, `pos.z` | position on the ground | **yes** |
+| `angle` | heading in radians; forward is `(sin a, 0, cos a)` | **yes** |
+| `speed` | signed scalar speed (driving backwards is negative) | yes, useful so other clients can predict movement |
+| `hp` | 0–100 | yes |
+| `energy` | 0–100, spent on boost and shooting | probably only the owner needs it |
+| `pos.y` | worked out from the terrain (`getElevation(x, z)`) | no |
+| `mesh.quaternion` | tilt on hills, worked out from the terrain normal and `angle` | no |
+| `vel` | declared but never used | no |
+| `maxSpeed`, `accel`, `handling` | fixed tuning values | no |
+| `lastShot` | timer that limits fire rate | no (owner only) |
+| `aiState`, `targetAngle`, `aiTimer` | bot AI only | no |
+
+Minimum to draw a remote car: `{x, z, angle}`. Add `speed` for smoothing between updates and `hp` for health/kills.
+
+### Laser (`class Laser`)
+
+`pos` (3D), `dir` (3D unit vector), `owner`, `life` (starts at 1 s); speed is fixed at 250. Lasers fly in a straight line, so a single "shot fired" message `{pos, dir, ownerId}` is enough for each client to simulate the flight.
+
 **Problem Statement Two: More Dimensions**
 
 Gemini 4 Argon is also SOTA on [long video understanding](https://blog.google/innovation-and-ai/models-and-research/gemini-models/gemini-4-argon/#workingharder), and its output window lets it generate high-fidelity [3D games and procedural worlds](https://aistudio.google.com/learn/building-3d-games-and-worlds-with-gemini-4-argon) in a single pass. A single pass is only the first draft. Build a system that renders what it made, watches the result, critiques it against the goal, and fixes it in a loop.
