@@ -113,8 +113,6 @@
             transition: width 0.1s;
         }
         #minimap {
-            width: 220px;
-            height: 220px;
             border-radius: 10px;
             border: 2px solid #00f0ff;
             box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
@@ -894,7 +892,7 @@
                 const nextZ = this.pos.z + forward.z * this.speed * dt;
 
                 // World Bounds & Bay Collision
-                if (nextX > -OFFSET + 20 && nextX < 420 && nextZ > -OFFSET + 20 && nextZ < OFFSET - 20) {
+                if (nextX > -OFFSET + 20 && nextX < SHORE_X && nextZ > -OFFSET + 20 && nextZ < OFFSET - 20) {
                     // Building Collision
                     if (!this.checkBuildingCollision(nextX, nextZ)) {
                         this.pos.x = nextX;
@@ -1750,32 +1748,43 @@
             drawMinimap();
         }
 
-        // --- MINIMAP (whole city, north-up: world x → right, z → down) ---
-        const MINIMAP_SIZE = 220; // CSS px, matches #minimap
-        let minimapBase = null;   // pre-rendered static layer (bay + buildings)
+        // --- MINIMAP (whole drivable city, north-up: world x → right, z → down) ---
+        // Cars can't go past x = 420 (the shoreline), so the map is cropped just beyond it.
+        const SHORE_X = 420;
+        const MAP_X0 = -OFFSET, MAP_X1 = SHORE_X + 20, MAP_Z0 = -OFFSET, MAP_Z1 = OFFSET;
+        const MINIMAP_H = 220; // CSS px
+        const MINIMAP_W = Math.round(MINIMAP_H * (MAP_X1 - MAP_X0) / (MAP_Z1 - MAP_Z0));
+        let minimapBase = null; // pre-rendered static layer (bay + buildings)
 
-        function mapPx(v) {
-            return (v + OFFSET) / (2 * OFFSET) * MINIMAP_SIZE;
+        function mapX(x) {
+            return (x - MAP_X0) / (MAP_X1 - MAP_X0) * MINIMAP_W;
+        }
+        function mapZ(z) {
+            return (z - MAP_Z0) / (MAP_Z1 - MAP_Z0) * MINIMAP_H;
         }
 
         function buildMinimapBase() {
             const dpr = Math.min(window.devicePixelRatio, 2);
             const canvas = document.getElementById('minimap');
-            canvas.width = canvas.height = MINIMAP_SIZE * dpr;
+            canvas.style.width = MINIMAP_W + 'px';
+            canvas.style.height = MINIMAP_H + 'px';
+            canvas.width = MINIMAP_W * dpr;
+            canvas.height = MINIMAP_H * dpr;
 
             const base = document.createElement('canvas');
-            base.width = base.height = MINIMAP_SIZE * dpr;
+            base.width = canvas.width;
+            base.height = canvas.height;
             const ctx = base.getContext('2d');
             ctx.scale(dpr, dpr);
             ctx.fillStyle = 'rgba(0, 20, 40, 0.8)';
-            ctx.fillRect(0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
+            ctx.fillRect(0, 0, MINIMAP_W, MINIMAP_H);
             // Bay
             ctx.fillStyle = 'rgba(0, 70, 120, 0.8)';
-            ctx.fillRect(mapPx(450), 0, MINIMAP_SIZE - mapPx(450), MINIMAP_SIZE);
+            ctx.fillRect(mapX(SHORE_X), 0, MINIMAP_W - mapX(SHORE_X), MINIMAP_H);
             // Buildings
             ctx.fillStyle = 'rgba(130, 150, 190, 0.45)';
             for (const b of buildings) {
-                ctx.fillRect(mapPx(b.minX), mapPx(b.minZ), mapPx(b.maxX) - mapPx(b.minX), mapPx(b.maxZ) - mapPx(b.minZ));
+                ctx.fillRect(mapX(b.minX), mapZ(b.minZ), mapX(b.maxX) - mapX(b.minX), mapZ(b.maxZ) - mapZ(b.minZ));
             }
             minimapBase = base;
         }
@@ -1783,10 +1792,10 @@
         function drawMinimap() {
             const canvas = document.getElementById('minimap');
             const ctx = canvas.getContext('2d');
-            const dpr = canvas.width / MINIMAP_SIZE;
+            const dpr = canvas.width / MINIMAP_W;
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctx.clearRect(0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
-            ctx.drawImage(minimapBase, 0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
+            ctx.clearRect(0, 0, MINIMAP_W, MINIMAP_H);
+            ctx.drawImage(minimapBase, 0, 0, MINIMAP_W, MINIMAP_H);
 
             // Other players: dot + name
             ctx.font = 'bold 10px "Segoe UI", Tahoma, sans-serif';
@@ -1794,7 +1803,7 @@
             ctx.lineWidth = 3;
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
             remoteVehicles.forEach(v => {
-                const x = mapPx(v.pos.x), y = mapPx(v.pos.z);
+                const x = mapX(v.pos.x), y = mapZ(v.pos.z);
                 ctx.fillStyle = '#ff0055';
                 ctx.shadowColor = '#ff0055';
                 ctx.shadowBlur = 6;
@@ -1804,10 +1813,10 @@
                 ctx.shadowBlur = 0;
 
                 const w = ctx.measureText(v.name).width;
-                const onLeft = x + 6 + w > MINIMAP_SIZE - 2;
+                const onLeft = x + 6 + w > MINIMAP_W - 2;
                 ctx.textAlign = onLeft ? 'right' : 'left';
                 const tx = onLeft ? x - 6 : x + 6;
-                const ty = THREE.MathUtils.clamp(y, 7, MINIMAP_SIZE - 7);
+                const ty = THREE.MathUtils.clamp(y, 7, MINIMAP_H - 7);
                 ctx.strokeText(v.name, tx, ty);
                 ctx.fillStyle = '#ffd0dc';
                 ctx.fillText(v.name, tx, ty);
@@ -1816,7 +1825,7 @@
             // Us: arrow pointing along our heading. Forward is (sin a, cos a) in (x, z),
             // so rotating an up-pointing arrow clockwise by (PI - a) lines it up.
             ctx.save();
-            ctx.translate(mapPx(player.pos.x), mapPx(player.pos.z));
+            ctx.translate(mapX(player.pos.x), mapZ(player.pos.z));
             ctx.rotate(Math.PI - player.angle);
             ctx.fillStyle = '#00f0ff';
             ctx.shadowColor = '#00f0ff';
