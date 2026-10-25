@@ -1,0 +1,62 @@
+[
+ {
+  "type": "warning",
+  "text": "[.WebGL-0x12408ad1400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+ },
+ {
+  "type": "warning",
+  "text": "[.WebGL-0x12408ad1400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+ },
+ {
+  "type": "warning",
+  "text": "[.WebGL-0x12408ad1400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+ },
+ {
+  "type": "warning",
+  "text": "[.WebGL-0x12408ad1400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+ },
+ {
+  "type": "error",
+  "text": "WebSocket connection to 'ws://127.0.0.1:9/ws' failed: Error in connection establishment: net::ERR_UNSAFE_PORT"
+ },
+ {
+  "type": "error",
+  "text": "WebSocket connection to 'ws://127.0.0.1:9/ws' failed: Error in connection establishment: net::ERR_UNSAFE_PORT"
+ },
+ {
+  "type": "error",
+  "text": "WebSocket connection to 'ws://127.0.0.1:9/ws' failed: Error in connection establishment: net::ERR_UNSAFE_PORT"
+ },
+ {
+  "type": "error",
+  "text": "WebSocket connection to 'ws://127.0.0.1:9/ws' failed: Error in connection establishment: net::ERR_UNSAFE_PORT"
+ },
+ {
+  "type": "error",
+  "text": "WebSocket connection to 'ws://127.0.0.1:9/ws' failed: Error in connection establishment: net::ERR_UNSAFE_PORT"
+ },
+ {
+  "type": "error",
+  "text": "WebSocket connection to 'ws://127.0.0.1:9/ws' failed: Error in connection establishment: net::ERR_UNSAFE_PORT"
+ },
+ {
+  "type": "error",
+  "text": "WebSocket connection to 'ws://127.0.0.1:9/ws' failed: Error in connection establishment: net::ERR_UNSAFE_PORT"
+ },
+ {
+  "type": "error",
+  "text": "WebSocket connection to 'ws://127.0.0.1:9/ws' failed: Error in connection establishment: net::ERR_UNSAFE_PORT"
+ },
+ {
+  "type": "error",
+  "text": "WebSocket connection to 'ws://127.0.0.1:9/ws' failed: Error in connection establishment: net::ERR_UNSAFE_PORT"
+ },
+ {
+  "type": "error",
+  "text": "WebSocket connection to 'ws://127.0.0.1:9/ws' failed: Error in connection establishment: net::ERR_UNSAFE_PORT"
+ },
+ {
+  "type": "error",
+  "text": "WebSocket connection to 'ws://127.0.0.1:9/ws' failed: Error in connection establishment: net::ERR_UNSAFE_PORT"
+ }
+]
