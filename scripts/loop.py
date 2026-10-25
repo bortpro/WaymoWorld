@@ -46,7 +46,8 @@ RUBRIC = {
                   "Victorian/Edwardian row houses, bay windows, street trees, overhead wires, lighting.",
     "laser_tag_fun": "Laser tag is visible and satisfying: beams, hits register, opponents move and fight back.",
     "driving_feel": "Driving responds to inputs, the car moves through the city and doesn't get stuck.",
-    "visual_polish": "Overall visual quality: lighting, materials, composition, HUD clarity, no glitches.",
+    "visual_polish": "Overall visual quality: clear sunny daytime, crisp contrast (not washed out or hazy), "
+                     "lighting, materials, composition, HUD clarity, no glitches.",
     "sf_landmarks": "Recognisable SF landmarks are visible: Golden Gate Bridge, Transamerica Pyramid, Salesforce "
                     "Tower, Painted Ladies, Coit/Sutro Tower, Bay Bridge, cable cars, Lombard St, fog.",
 }
@@ -70,6 +71,10 @@ Waymo: Jaguar I-PACE silhouette, glossy white MeshPhysicalMaterial with clearcoa
 roof lidar dome, corner sensor pods.
 Performance: setPixelRatio(min(devicePixelRatio, 1.5)), a single shadow-casting light, no real-time point
 lights (lasers glow via emissive + bloom), instancing, frustum culling, fog to bound draw distance."""
+
+LOOK = """LOOK: clear, sunny SF daytime with crisp contrast, like the TARGET LOOK screenshot if provided.
+toneMappingExposure about 1.0; scene fog only far away (near >= 250 units) and subtle; bloom strength
+<= 0.3 with threshold >= 0.85 so only lasers/emissives glow; no white haze, no overexposed sky or buildings."""
 
 MP_CONTRACT = """MULTIPLAYER CONTRACT (another developer owns networking; keep it working):
 Do not change networking code or message formats (SERVER_URL, ws, myId, connect, netSend, sendState, roster,
@@ -118,6 +123,8 @@ Goal: {GOAL}
 Waymo car reference: {WAYMO_CAR}
 
 {GRAPHICS_SPEC}
+
+{LOOK}
 
 {MP_CONTRACT}
 
@@ -242,8 +249,11 @@ GRAPHICS_PASS = ("This is the big GRAPHICS PASS: implement as much of the GRAPHI
 
 
 def build(c, model, html: str, crit: dict, builder_refs: list[Path], notes: list[str],
-          graphics_pass: bool = False) -> tuple[str, str, dict]:
+          graphics_pass: bool = False, style_refs: list[Path] = ()) -> tuple[str, str, dict]:
     parts = []
+    if style_refs:
+        parts.append(types.Part.from_text(text="TARGET LOOK: screenshots of an earlier version the team liked (lighting/clarity):"))
+        parts += [img_part(p) for p in style_refs]
     if builder_refs:
         parts.append(types.Part.from_text(text="Reference photos of real San Francisco streets from Waymo cameras:"))
         parts += [img_part(p) for p in builder_refs]
@@ -309,6 +319,7 @@ def main():
     p.add_argument("--samples", type=int, default=2, help="critic samples averaged per evaluation")
     p.add_argument("--margin", type=float, default=2.0, help="min total gain to accept a candidate")
     p.add_argument("--graphics-pass", action="store_true", help="iteration 1 is a full-file graphics rewrite")
+    p.add_argument("--style-ref", type=Path, action="append", default=[], help="screenshot(s) of the target look")
     p.add_argument("--images", type=Path, default=Path("data/images"))
     a = p.parse_args()
 
@@ -339,7 +350,7 @@ def main():
         cand_dir = a.run / f"iter_{i}"
         cand_dir.mkdir(exist_ok=True)
         html, raw, usage = build(c, model, (best_dir / "index.html").read_text(), best, builder_refs, notes,
-                                 graphics_pass=a.graphics_pass and i == 1)
+                                 graphics_pass=a.graphics_pass and i == 1, style_refs=a.style_ref)
         (cand_dir / "builder_response.md").write_text(raw)
         (cand_dir / "index.html").write_text(html)
         if usage["edits_applied"] == 0:
