@@ -1,0 +1,87 @@
+[
+  {
+    "iter": 0,
+    "accepted": true,
+    "total": 12.0,
+    "scores": {
+      "waymo_look": 3.0,
+      "sf_realism": 2.0,
+      "laser_tag_fun": 1.0,
+      "driving_feel": 2.0,
+      "visual_polish": 4.0
+    },
+    "errors": 0
+  },
+  {
+    "iter": 1,
+    "accepted": true,
+    "total": 29.0,
+    "scores": {
+      "waymo_look": 7.0,
+      "sf_realism": 5.0,
+      "laser_tag_fun": 7.0,
+      "driving_feel": 5.0,
+      "visual_polish": 5.0
+    },
+    "errors": 0,
+    "seconds": 272,
+    "in": 20740,
+    "out": 23951,
+    "edits_applied": 9,
+    "edits_total": 9
+  },
+  {
+    "iter": 2,
+    "accepted": false,
+    "total": 29.0,
+    "scores": {
+      "waymo_look": 7.0,
+      "sf_realism": 5.0,
+      "laser_tag_fun": 6.0,
+      "driving_feel": 5.0,
+      "visual_polish": 6.0
+    },
+    "errors": 0,
+    "seconds": 186,
+    "in": 29200,
+    "out": 17340,
+    "edits_applied": 14,
+    "edits_total": 15
+  },
+  {
+    "iter": 3,
+    "accepted": false,
+    "total": 29.0,
+    "scores": {
+      "waymo_look": 7.0,
+      "sf_realism": 5.0,
+      "laser_tag_fun": 6.0,
+      "driving_feel": 5.0,
+      "visual_polish": 6.0
+    },
+    "errors": 0,
+    "seconds": 105,
+    "in": 29243,
+    "out": 7234,
+    "edits_applied": 9,
+    "edits_total": 9
+  },
+  {
+    "iter": 4,
+    "accepted": false,
+    "total": 30.0,
+    "scores": {
+      "waymo_look": 7.0,
+      "sf_realism": 5.0,
+      "laser_tag_fun": 7.0,
+      "driving_feel": 5.0,
+      "visual_polish": 6.0
+    },
+    "errors": 0,
+    "seconds": 98,
+    "in": 29286,
+    "out": 5551,
+    "edits_applied": 9,
+    "edits_total": 10
+  }
+]

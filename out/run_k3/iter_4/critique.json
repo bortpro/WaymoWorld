@@ -1,0 +1,70 @@
+{
+  "scores": {
+    "waymo_look": 7.0,
+    "sf_realism": 5.0,
+    "laser_tag_fun": 7.0,
+    "driving_feel": 5.0,
+    "visual_polish": 6.0
+  },
+  "summary": "The game establishes a solid foundation with recognizable low-poly Waymo vehicles, active enemy AI shooting lasers, steep San Francisco hills, and a slick HUD. However, gameplay and immersion suffer when turning causes the car to scrape along building walls, buildings lack SF architectural depth and landmarks, and vehicles clip straight through each other without collision physics.",
+  "top_issues": [
+    {
+      "criterion": "driving_feel",
+      "issue": "Turning left pushes the car onto the sidewalk where it grinds along the building wall instead of navigating the street.",
+      "evidence": "From 00:08 to 00:19 (and Screenshots 3, 4, 5), after the w+a input, the car hits the left building wall and slides along it, eventually dropping to 1-6 MPH while stuck against the facade.",
+      "fix_hint": "Add proper wall collision deflection or steering assist that pushes the vehicle away from building walls at an angle so it re-enters the roadway smoothly."
+    },
+    {
+      "criterion": "sf_realism",
+      "issue": "Environment looks like generic flat-textured office blocks rather than authentic San Francisco streets and landmarks shown in the reference photos.",
+      "evidence": "Screenshots 1-5 show repetitive flat-shaded brown/beige grid buildings with no 3D bay windows, Victorian rowhouse trim, Bay Bridge views, construction details, or overhead wires.",
+      "fix_hint": "Add 3D architectural geometry (protruding bay windows, cornices, varied rooflines), landmark vistas (Bay Bridge, Transamerica Pyramid in view), overhead trolley wires, and richer street props."
+    },
+    {
+      "criterion": "driving_feel",
+      "issue": "Zero vehicle-to-vehicle collision physics; Waymos pass straight through each other like ghosts.",
+      "evidence": "At 00:03 in the video, an opponent Waymo drives directly through the player's car body with zero physical reaction.",
+      "fix_hint": "Implement bounding-box or sphere collision responses between all Waymo vehicles so they bump or deflect off one another."
+    },
+    {
+      "criterion": "visual_polish",
+      "issue": "Low framerate and visible shadow-map staircase artifacts on road and car surfaces.",
+      "evidence": "Telemetry reports FPS between 15 and 21 across most steps; Screenshot 3 and 4 show jagged shadow aliasing teeth along the road slope and car rear.",
+      "fix_hint": "Optimize scene draw calls/instancing to hit 60 FPS and tune directional light shadow bias and frustum bounds to eliminate shadow acne."
+    },
+    {
+      "criterion": "laser_tag_fun",
+      "issue": "Player lasers fire straight forward into empty space or walls when enemies are off-axis, resulting in 0 tags during combat.",
+      "evidence": "At 00:09-00:15 (and telemetry showing 22 lasersFired but 0 tags), the cyan laser shoots straight ahead into the wall/street while rival Waymos pass on the left.",
+      "fix_hint": "Since the LIDAR turret is a 360-degree spinning dome on the roof, give the player's laser cannon generous auto-aim/target-lock toward the nearest visible rival Waymo within a wide cone."
+    },
+    {
+      "criterion": "driving_feel",
+      "issue": "Player car turns into a building wall and grinds along the sidewalk for half the test drive, losing speed down to 1-5 MPH instead of smoothly bouncing off or redirecting onto the road.",
+      "evidence": "Video 00:08 to 00:19 and Screenshots 3-5 show the car pressed against the left building facade, scraping along the wall until speed drops to 1 MPH.",
+      "fix_hint": "Add proper wall collision restitution and steering assist/deflection along curbs or building colliders so cars glancing off walls redirect back toward the street."
+    },
+    {
+      "criterion": "driving_feel",
+      "issue": "No car-to-car collision physics; opponent Waymos clip directly through the player vehicle.",
+      "evidence": "Video 00:03 shows an opponent Waymo driving right through the middle of the player's car without either vehicle reacting.",
+      "fix_hint": "Implement bounding-box or sphere-based vehicle-to-vehicle collision resolution with impulse pushback."
+    },
+    {
+      "criterion": "sf_realism",
+      "issue": "Buildings and streets look overly sterile and uniform, lacking SF landmarks (like the Bay Bridge seen in the reference photos), Victorian bay windows, overhead wires, and rich street-level clutter.",
+      "evidence": "Screenshots 1-5 compared to REAL San Francisco reference photos: buildings are repetitive flat-textured boxes with simple grid windows, and the sky is a plain solid color.",
+      "fix_hint": "Add the Bay Bridge in the background, overhead trolley wires, varied building facades (3D bay windows, brick/concrete textures, construction barriers), and a skybox with clouds."
+    }
+  ],
+  "total": 30.0,
+  "usage": {
+    "in": 6020,
+    "out": 821
+  },
+  "sample_totals": [
+    30.0,
+    30
+  ],
+  "errors": 0
+}

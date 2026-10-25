@@ -47,7 +47,36 @@ RUBRIC = {
     "laser_tag_fun": "Laser tag is visible and satisfying: beams, hits register, opponents move and fight back.",
     "driving_feel": "Driving responds to inputs, the car moves through the city and doesn't get stuck.",
     "visual_polish": "Overall visual quality: lighting, materials, composition, HUD clarity, no glitches.",
+    "sf_landmarks": "Recognisable SF landmarks are visible: Golden Gate Bridge, Transamerica Pyramid, Salesforce "
+                    "Tower, Painted Ladies, Coit/Sutro Tower, Bay Bridge, cable cars, Lombard St, fog.",
 }
+
+GRAPHICS_SPEC = """GRAPHICS UPGRADE SPEC (target: clean, cinematic, GTA-like realism, still fast):
+Rendering: renderer.toneMapping = ACESFilmicToneMapping, outputColorSpace = SRGBColorSpace, physically
+based MeshStandard/MeshPhysical materials. Sky from three/addons/objects/Sky.js with a golden-hour sun; build
+an environment map from it with PMREMGenerator so paint/glass/wet asphalt reflect the sky. One directional
+sun with PCFSoft shadows whose shadow camera follows the player (tight frustum, 2048 map). Hemisphere fill
+light. Fog colour matched to the horizon, plus a soft low fog bank rolling in from the bay.
+Post: EffectComposer with RenderPass, GTAOPass (ambient occlusion), restrained UnrealBloomPass (only lasers,
+lights, emissives), OutputPass; SMAA or FXAA. Never wash the frame out.
+City: Victorian/Edwardian row houses with bay windows, cornices, trim, painted-lady palettes, canvas-generated
+facade textures; steep hills; sidewalks with curbs, street trees, lamp posts, overhead Muni wires, lane
+markings, manhole covers; use InstancedMesh for every repeated object and merge static geometry.
+Landmarks (deterministic placement, visible from hills): Golden Gate Bridge (International Orange towers,
+catenary cables, deck, fog around towers), Transamerica Pyramid, Salesforce Tower, Painted Ladies row with
+skyline behind, Coit Tower, Sutro Tower, Bay Bridge, Ferry Building clock tower, cable car + tracks, Lombard
+zigzag. Use lower detail for distant landmarks.
+Waymo: Jaguar I-PACE silhouette, glossy white MeshPhysicalMaterial with clearcoat, tinted reflective glass,
+roof lidar dome, corner sensor pods.
+Performance: setPixelRatio(min(devicePixelRatio, 1.5)), a single shadow-casting light, no real-time point
+lights (lasers glow via emissive + bloom), instancing, frustum culling, fog to bound draw distance."""
+
+MP_CONTRACT = """MULTIPLAYER CONTRACT (another developer owns networking; keep it working):
+Do not change networking code or message formats (SERVER_URL, ws, myId, connect, netSend, sendState, roster,
+leaderboard, 'join'/'state'/'shoot'/'hit' messages). Keep class Vehicle and class Laser with their fields
+(pos, angle, speed, hp, energy, id/name, dir, owner, life), getElevation/getTerrainNormal signatures, and the
+seeded mulberry32 world generation (all clients must build the identical city and collision boxes).
+Visual-only changes (meshes, materials, lighting, post-processing, decorative props) are always fine."""
 
 CRITIC_SYSTEM = f"""You are a demanding game critic and QA tester. You never see source code.
 You judge a browser game against this goal:
@@ -87,6 +116,10 @@ CRITIC_SCHEMA = {
 BUILDER_SYSTEM = f"""You are an expert three.js game developer improving a single-file browser game.
 Goal: {GOAL}
 Waymo car reference: {WAYMO_CAR}
+
+{GRAPHICS_SPEC}
+
+{MP_CONTRACT}
 
 Rules:
 - Fix the critic's top issues, most impactful first. Keep everything that already works.
@@ -203,7 +236,13 @@ def apply_edits(html: str, response: str) -> tuple[str, int, int]:
     return html, applied, len(edits)
 
 
-def build(c, model, html: str, crit: dict, builder_refs: list[Path], notes: list[str]) -> tuple[str, str, dict]:
+GRAPHICS_PASS = ("This is the big GRAPHICS PASS: implement as much of the GRAPHICS UPGRADE SPEC as you can in one go, "
+                 "plus the critic's top issues, while honouring the MULTIPLAYER CONTRACT. For this pass return the "
+                 "COMPLETE updated file in a single ```html block instead of SEARCH/REPLACE edits.")
+
+
+def build(c, model, html: str, crit: dict, builder_refs: list[Path], notes: list[str],
+          graphics_pass: bool = False) -> tuple[str, str, dict]:
     parts = []
     if builder_refs:
         parts.append(types.Part.from_text(text="Reference photos of real San Francisco streets from Waymo cameras:"))
@@ -212,6 +251,7 @@ def build(c, model, html: str, crit: dict, builder_refs: list[Path], notes: list
         f"Critic report:\n{json.dumps({k: crit[k] for k in ('scores', 'summary', 'top_issues')}, indent=1)}\n\n"
         + (f"Notes from previous attempts:\n- " + "\n- ".join(notes[-5:]) + "\n\n" if notes else "")
         + f"Current index.html:\n```html\n{html}\n```"
+        + (f"\n\n{GRAPHICS_PASS}" if graphics_pass else "")
     )))
     resp = c.models.generate_content(
         model=model,
@@ -227,6 +267,13 @@ def build(c, model, html: str, crit: dict, builder_refs: list[Path], notes: list
     usage = {"in": resp.usage_metadata.prompt_token_count, "out": resp.usage_metadata.candidates_token_count,
              "edits_applied": applied, "edits_total": total}
     return new_html, text, usage
+
+
+def median_fps(rendered: dict):
+    """Median in-game fps from window.__waymo telemetry (software-rendered, so only comparable run-to-run)."""
+    fps = sorted(t["state"]["fps"] for t in rendered.get("telemetry", [])
+                 if isinstance(t.get("state"), dict) and isinstance(t["state"].get("fps"), (int, float)))
+    return fps[len(fps) // 2] if fps else None
 
 
 def evaluate(c, model, game_dir: Path, critic_refs, samples: int = 2) -> tuple[dict, dict]:
@@ -246,6 +293,7 @@ def evaluate(c, model, game_dir: Path, critic_refs, samples: int = 2) -> tuple[d
     crit["sample_totals"] = [r["total"] for r in runs]
     crit["top_issues"] = [i for r in runs for i in r["top_issues"]][:8]
     crit["errors"] = len(rendered["errors"])
+    crit["fps"] = median_fps(rendered)
     (game_dir / "critique.json").write_text(json.dumps(crit, indent=2))
     return rendered, crit
 
@@ -260,6 +308,7 @@ def main():
     p.add_argument("--holdout", type=int, default=5, help="held-out SF frames for the critic")
     p.add_argument("--samples", type=int, default=2, help="critic samples averaged per evaluation")
     p.add_argument("--margin", type=float, default=2.0, help="min total gain to accept a candidate")
+    p.add_argument("--graphics-pass", action="store_true", help="iteration 1 is a full-file graphics rewrite")
     p.add_argument("--images", type=Path, default=Path("data/images"))
     a = p.parse_args()
 
@@ -289,7 +338,8 @@ def main():
         t0 = time.time()
         cand_dir = a.run / f"iter_{i}"
         cand_dir.mkdir(exist_ok=True)
-        html, raw, usage = build(c, model, (best_dir / "index.html").read_text(), best, builder_refs, notes)
+        html, raw, usage = build(c, model, (best_dir / "index.html").read_text(), best, builder_refs, notes,
+                                 graphics_pass=a.graphics_pass and i == 1)
         (cand_dir / "builder_response.md").write_text(raw)
         (cand_dir / "index.html").write_text(html)
         if usage["edits_applied"] == 0:
@@ -299,9 +349,10 @@ def main():
             continue
 
         _, crit = evaluate(c, model, cand_dir, critic_refs, a.samples)
-        improved = crit["total"] >= best["total"] + a.margin and crit["errors"] <= best["errors"]
+        too_slow = bool(crit.get("fps") and best.get("fps") and crit["fps"] < 0.6 * best["fps"])
+        improved = crit["total"] >= best["total"] + a.margin and crit["errors"] <= best["errors"] and not too_slow
         entry = {"iter": i, "accepted": improved, "total": crit["total"], "scores": crit["scores"],
-                 "errors": crit["errors"], "seconds": round(time.time() - t0), **usage}
+                 "errors": crit["errors"], "fps": crit.get("fps"), "too_slow": too_slow, "seconds": round(time.time() - t0), **usage}
         history.append(entry)
         if improved:
             best_dir, best = cand_dir, crit
@@ -310,7 +361,9 @@ def main():
             notes.append(f"iter {i}: REVERTED, the page failed to load/run in the browser ({crit['failed']}). "
                          "Avoid heavy synchronous work at startup and infinite loops.")
         else:
-            worse = [k for k in RUBRIC if crit["scores"][k] < best["scores"][k]]
+            worse = [k for k in RUBRIC if crit["scores"][k] < best["scores"].get(k, 0)]
+            if too_slow:
+                worse.append(f"performance (fps {crit['fps']} vs {best['fps']})")
             notes.append(f"iter {i}: REVERTED (score {crit['total']} vs best {best['total']}, errors "
                          f"{crit['errors']}). Got worse on: {', '.join(worse) or 'nothing specific'}. Try a different fix.")
         print(f"iter {i}: {'ACCEPT' if improved else 'revert'} total {crit['total']} {crit['scores']} "

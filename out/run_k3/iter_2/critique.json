@@ -1,0 +1,70 @@
+{
+  "scores": {
+    "waymo_look": 7.0,
+    "sf_realism": 5.0,
+    "laser_tag_fun": 6.0,
+    "driving_feel": 5.0,
+    "visual_polish": 6.0
+  },
+  "summary": "Waymo World captures the fun concept of autonomous robotaxis playing laser tag in a hilly San Francisco grid. The Waymo vehicle models are recognizable with their roof lidars, corner sensors, and door logos, and the HUD is sleek and readable. However, the city looks overly sterile with repetitive flat-textured blocks, performance is sluggish (10-21 FPS), and building collision handling causes the car to scrape along walls for extended periods.",
+  "top_issues": [
+    {
+      "criterion": "driving_feel",
+      "issue": "Poor wall collision recovery causes the player car to get wedged against building facades and grind along them slowly rather than bouncing off or steering away cleanly.",
+      "evidence": "Video 00:06 to 00:13 (and Screenshots 3 & 4) show the car turning left into a building corner and grinding along the sidewalk/wall for 7 seconds.",
+      "fix_hint": "Add a restitution/push-out impulse along the wall normal on collision and slightly angle the vehicle velocity parallel to the street so glancing hits slide smoothly off buildings."
+    },
+    {
+      "criterion": "sf_realism",
+      "issue": "Environment lacks authentic San Francisco architectural detail, street clutter, and landmarks compared to real camera photos.",
+      "evidence": "Screenshots 1-5 show repetitive, flat-shaded brown and grey rectangular buildings and empty grey roads; no Bay Bridge, construction props, parked cars, or detailed Victorian mouldings are visible.",
+      "fix_hint": "Add iconic SF landmarks on the horizon (Bay Bridge, Transamerica Pyramid), varied Victorian rowhouse colors/trim, street props (hydrants, utility boxes, signs), and richer asphalt/sidewalk textures."
+    },
+    {
+      "criterion": "visual_polish",
+      "issue": "Low framerate makes driving and aiming feel choppy.",
+      "evidence": "Telemetry reports FPS between 10 and 21 across all input steps (e.g., 11 FPS at start, 10 FPS during driving).",
+      "fix_hint": "Merge static city building and street geometries or use InstancedMesh for repeated buildings, trees, and streetlights to drastically reduce draw calls."
+    },
+    {
+      "criterion": "laser_tag_fun",
+      "issue": "Player laser shots are underwhelming and hard to land without turret auto-aim or stronger beam visuals.",
+      "evidence": "In video 00:07-00:08 and Screenshot 3/5, player laser fire appears as small cyan/pink cubes rather than a bright continuous lidar beam, and 27 shots fired result in 0 tags.",
+      "fix_hint": "Render a high-visibility glowing laser beam from the roof dome to the impact point and add subtle horizontal/vertical auto-aim assist toward nearby enemy Waymos within the reticle cone."
+    },
+    {
+      "criterion": "waymo_look",
+      "issue": "Car proportions are overly boxy and angular compared to the sleek Jaguar I-PACE crossover silhouette.",
+      "evidence": "Screenshots 1, 2, and 5 show a blocky rear hatch and flat vertical sides with unshaded black windows.",
+      "fix_hint": "Bevel the roofline and fenders to better match the Jaguar I-PACE coupe-SUV profile, and give the windows a dark reflective material instead of flat matte black."
+    },
+    {
+      "criterion": "driving_feel",
+      "issue": "Car scrapes along building walls for long stretches without bouncing off or turning cleanly, and camera clips closely into building facades.",
+      "evidence": "From 00:06 to 00:13 in the video (and Screenshots 3 & 4), the player car grinds along the brown building wall while trying to turn, with the camera pressed right against the wall geometry.",
+      "fix_hint": "Add proper rigid-body collision impulse so cars deflect away from walls at an angle rather than sliding flush against them, and add camera collision raycasting."
+    },
+    {
+      "criterion": "sf_realism",
+      "issue": "Roads, sidewalks, and buildings lack realistic textures, surface detail, and landmarks compared to real San Francisco photos.",
+      "evidence": "Screenshots 1-5 show uniform flat grey roads and sidewalks, repetitive grid-window building blocks, and an empty sky without landmarks like the Bay Bridge or Transamerica Pyramid mentioned on the start screen.",
+      "fix_hint": "Add procedural asphalt/concrete noise textures, varied Victorian rowhouse color palettes, street clutter (hydrants, signs, parked cars, construction barriers), and distant SF landmarks (Bay Bridge, Transamerica Pyramid)."
+    },
+    {
+      "criterion": "laser_tag_fun",
+      "issue": "Player laser shots are tiny cyan bolts that barely read on screen, whereas enemy lasers are bright solid red beams.",
+      "evidence": "Compare 00:00 (bright solid red beam from opponent hitting player) with 00:07-00:08 and Screenshot 3 (faint cyan reticle and tiny cyan Bolt/particles barely visible against the wall/sky).",
+      "fix_hint": "Give the player's roof laser a thick, high-contrast glowing beam (like the enemy beam or a bright cyan/magenta continuous pulse) with auto-aim assistance toward nearby enemy Waymos within a forward cone."
+    }
+  ],
+  "total": 29.0,
+  "usage": {
+    "in": 5724,
+    "out": 825
+  },
+  "sample_totals": [
+    29.0,
+    29
+  ],
+  "errors": 0
+}

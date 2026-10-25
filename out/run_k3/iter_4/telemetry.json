@@ -1,0 +1,138 @@
+[
+ {
+  "keys": [],
+  "state": {
+   "player": {
+    "x": -85,
+    "y": 54.58,
+    "z": 15,
+    "speed": 0
+   },
+   "enemiesVisible": 9,
+   "enemiesTotal": 18,
+   "tags": 0,
+   "lasersFired": 0,
+   "fps": 20,
+   "stuck": false
+  }
+ },
+ {
+  "keys": [
+   "w"
+  ],
+  "state": {
+   "player": {
+    "x": -62.52,
+    "y": 58.86,
+    "z": 11.97,
+    "speed": 32
+   },
+   "enemiesVisible": 4,
+   "enemiesTotal": 18,
+   "tags": 0,
+   "lasersFired": 0,
+   "fps": 16,
+   "stuck": false
+  }
+ },
+ {
+  "keys": [
+   "w",
+   "a"
+  ],
+  "state": {
+   "player": {
+    "x": -47.63,
+    "y": 60.84,
+    "z": -0.03,
+    "speed": 31
+   },
+   "enemiesVisible": 3,
+   "enemiesTotal": 18,
+   "tags": 0,
+   "lasersFired": 0,
+   "fps": 19,
+   "stuck": false
+  }
+ },
+ {
+  "keys": [
+   "w",
+   " "
+  ],
+  "state": {
+   "player": {
+    "x": -47.11,
+    "y": 60.74,
+    "z": -3.36,
+    "speed": 29
+   },
+   "enemiesVisible": 4,
+   "enemiesTotal": 18,
+   "tags": 0,
+   "lasersFired": 9,
+   "fps": 19,
+   "stuck": false
+  }
+ },
+ {
+  "keys": [
+   "w",
+   "d"
+  ],
+  "state": {
+   "player": {
+    "x": -40.79,
+    "y": 61.86,
+    "z": -3.84,
+    "speed": 24
+   },
+   "enemiesVisible": 3,
+   "enemiesTotal": 18,
+   "tags": 0,
+   "lasersFired": 9,
+   "fps": 31,
+   "stuck": false
+  }
+ },
+ {
+  "keys": [
+   "w",
+   "Shift",
+   " "
+  ],
+  "state": {
+   "player": {
+    "x": -14.28,
+    "y": 66.17,
+    "z": -3.84,
+    "speed": 27
+   },
+   "enemiesVisible": 2,
+   "enemiesTotal": 18,
+   "tags": 0,
+   "lasersFired": 17,
+   "fps": 15,
+   "stuck": false
+  }
+ },
+ {
+  "keys": [
+   " "
+  ],
+  "state": {
+   "player": {
+    "x": -9.26,
+    "y": 66.89,
+    "z": -3.82,
+    "speed": 2
+   },
+   "enemiesVisible": 2,
+   "enemiesTotal": 18,
+   "tags": 0,
+   "lasersFired": 22,
+   "fps": 21,
+   "stuck": false
+  }
+ }
+]

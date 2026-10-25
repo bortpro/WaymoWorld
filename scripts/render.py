@@ -31,6 +31,8 @@ DRIVE = [
     ([" "], 2.0, True),
 ]
 VIEWPORT = {"width": 1280, "height": 720}
+# Never join the live multiplayer server from test renders: point it at a dead local port.
+QUERY = "?server=ws://127.0.0.1:9/ws"
 # Seeded Math.random so the same code gives the same world/bots/spawns on every render.
 SEED_RANDOM = """
 (() => {
@@ -111,7 +113,7 @@ def render(game_dir: Path) -> dict:
             page.on("console", lambda m: logs.append({"type": m.type, "text": m.text}))
             page.on("pageerror", lambda e: logs.append({"type": "pageerror", "text": str(e)}))
             stage = "load"
-            page.goto(page_path.as_uri(), wait_until="commit")
+            page.goto(page_path.as_uri() + QUERY, wait_until="commit")
             page.wait_for_load_state("load")
             page.wait_for_timeout(3000)
             stage = "start screenshot"
@@ -152,7 +154,7 @@ def render(game_dir: Path) -> dict:
     n_frames = write_video(frames, game_dir / "play.mp4")
     (game_dir / "console.json").write_text(json.dumps(logs, indent=1))
     (game_dir / "telemetry.json").write_text(json.dumps(telemetry, indent=1))
-    errors = [l["text"] for l in logs if l["type"] in ("error", "pageerror")]
+    errors = [l["text"] for l in logs if l["type"] in ("error", "pageerror") and "ws://127.0.0.1:9" not in l["text"]]
     return {"shots": shots, "video": "play.mp4", "frames": n_frames, "errors": errors, "n_console": len(logs), "telemetry": telemetry, "failed": failed}
 
 

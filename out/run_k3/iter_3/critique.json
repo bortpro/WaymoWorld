@@ -1,0 +1,70 @@
+{
+  "scores": {
+    "waymo_look": 7.0,
+    "sf_realism": 5.0,
+    "laser_tag_fun": 6.0,
+    "driving_feel": 5.0,
+    "visual_polish": 6.0
+  },
+  "summary": "A solid foundation for Waymo World with recognizable low-poly robotaxis, steep San Francisco hills, and active laser tag combat. However, enemy lasers currently clip directly through solid buildings, building meshes float above steep slopes, and the car gets pinned against walls without sliding.",
+  "top_issues": [
+    {
+      "criterion": "laser_tag_fun",
+      "issue": "Enemy laser beams pass straight through solid buildings and hit the player through walls.",
+      "evidence": "In video 00:01-00:05 and 00:15-00:16 (and Screenshot 1), thick red enemy lasers clip directly through the brown corner buildings and reduce player LIDAR Integrity while the player is behind cover.",
+      "fix_hint": "Perform raycast/collision checks for laser projectiles against building bounding boxes so walls block line-of-sight and terminate beams on impact."
+    },
+    {
+      "criterion": "sf_realism",
+      "issue": "Buildings do not have extended foundations on hills, causing them to float above the sloped terrain, and bay windows float detached from facades.",
+      "evidence": "Screenshot 3 and video 00:07-00:10 clearly show gaps underneath the grey Victorian buildings on the hill slope and bay window boxes floating off the walls.",
+      "fix_hint": "Extend building foundations/basements downward well below ground level so they sink into the hillside terrain cleanly, and attach bay window geometry flush against the main building mesh."
+    },
+    {
+      "criterion": "driving_feel",
+      "issue": "Wall collisions lack glancing slide physics, causing the car to get stuck nose-first against buildings.",
+      "evidence": "In video 00:12-00:16 (Screenshots 4 & 5), the player turns into a building wall while holding W+Shift and comes to a near-complete stop (speed drops from 42 to 2 mph) instead of sliding along the wall or bouncing off onto the street.",
+      "fix_hint": "Project the car's velocity vector along the wall's tangent normal upon collision and gently steer/rotate the car body parallel to the wall so it slides smoothly along surfaces."
+    },
+    {
+      "criterion": "sf_realism",
+      "issue": "Environment lighting, sky, and building textures look flat and untextured compared to the real San Francisco reference photos.",
+      "evidence": "Across all screenshots (Screenshots 1-5), the sky is a plain flat light-blue color without clouds or the Bay Bridge/water vista seen in reference photos, and road/building surfaces lack surface detail, street trees, and overhead wires.",
+      "fix_hint": "Add a skybox with clouds and distant Bay Bridge/hills, overhead trolley wires along streets, more street trees/palms, and richer procedural facade details (cornices, steps, varied window frames, directional sunlight with crisp shadows)."
+    },
+    {
+      "criterion": "visual_polish",
+      "issue": "Low framerate (11-15 FPS) during driving and particle effects look like unstyled flat squares.",
+      "evidence": "Telemetry reports FPS dropping to 11-15 FPS during movement steps, and Screenshot 3 shows large blocky cyan square exhaust particles on the rear of the car.",
+      "fix_hint": "Optimize scene rendering (merge static building geometries or use instanced meshes, limit shadow map resolution/frustum) and use additive-blended soft circular or glowing trail particles for boost/impacts."
+    },
+    {
+      "criterion": "laser_tag_fun",
+      "issue": "Enemy laser beams pass directly through solid buildings to hit the player, breaking line-of-sight cover mechanics.",
+      "evidence": "In video 00:00-00:04 (Shot 1) and 00:15-00:16, thick red enemy laser beams emerge directly out of solid brown building walls and damage the player.",
+      "fix_hint": "Perform raycast/collision checks against building bounding boxes for both enemy AI line-of-sight checks before firing and for laser projectile termination."
+    },
+    {
+      "criterion": "sf_realism",
+      "issue": "Environment looks overly sterile, flat, and blurry compared to the real San Francisco camera references.",
+      "evidence": "Shots 1-5 show blurry low-res procedural facade textures, uniform featureless gray roads/sidewalks, a flat skybox, and no SF landmarks like the Bay Bridge, street clutter, or rich architectural detailing seen in the reference photos.",
+      "fix_hint": "Increase procedural canvas texture resolution with crisp normal/roughness details, add asphalt wear/manholes, street props (signals, signs, palms, construction barriers), and a background Bay Bridge/skyline."
+    },
+    {
+      "criterion": "driving_feel",
+      "issue": "Vehicle easily gets pinned against building walls during turns with no slide-along collision response, and camera clips into buildings.",
+      "evidence": "At 00:06 and 00:13-00:16 (Shots 4-5), the player car turns into a building wall and grinds to a halt facing the wall while the camera view is completely blocked by the blurry facade.",
+      "fix_hint": "Implement wall-sliding physics (project velocity onto the wall tangent and gently steer the car away on oblique impacts) and add camera raycast collision so the camera pulls closer instead of staring at a wall."
+    }
+  ],
+  "total": 29.0,
+  "usage": {
+    "in": 5796,
+    "out": 864
+  },
+  "sample_totals": [
+    29.0,
+    29
+  ],
+  "errors": 0
+}
