@@ -313,7 +313,7 @@ def main():
     p.add_argument("--start", type=Path, default=Path("out/baseline_v0"))
     p.add_argument("--run", type=Path)
     p.add_argument("--eval-only", type=Path, help="just render + critique this game dir")
-    p.add_argument("--iters", type=int, default=3)
+    p.add_argument("--iters", type=int, default=2)
     p.add_argument("--k", type=int, default=3, help="SF reference frames for the builder")
     p.add_argument("--holdout", type=int, default=5, help="held-out SF frames for the critic")
     p.add_argument("--samples", type=int, default=2, help="critic samples averaged per evaluation")
