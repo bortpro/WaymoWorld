@@ -1,0 +1,72 @@
+{
+  "scores": {
+    "waymo_look": 7.0,
+    "sf_realism": 5.0,
+    "laser_tag_fun": 6.5,
+    "driving_feel": 7.0,
+    "visual_polish": 4.5,
+    "sf_landmarks": 6.0
+  },
+  "summary": "A solid low-poly prototype with recognizable Waymo robotaxis, hilly San Francisco streets, a Golden Gate Bridge backdrop, and active AI laser tag combat. However, extreme bloom/haze washes out the building colors and sky, enemy nameplates scale up to massive sizes when close, and framerate drops below 20 FPS during combat.",
+  "top_issues": [
+    {
+      "criterion": "visual_polish",
+      "issue": "Severe bloom, overexposure, and white distance fog make the scene look washed out and blow out building facades into pure white.",
+      "evidence": "Screenshots 0-5 show building walls on the left/right completely blown out to white, and the distant sky/horizon is overly hazy.",
+      "fix_hint": "Reduce directional/ambient light intensity, tone down post-processing bloom, and replace thick white fog with a crisp, clear blue sky and high-contrast shadows."
+    },
+    {
+      "criterion": "visual_polish",
+      "issue": "3D world-space nameplates above opponent Waymos do not clamp their screen size, becoming huge and obstructing the camera when an enemy passes nearby.",
+      "evidence": "Video 00:07 ('WAYMO-SF12' fills the bottom right third of the screen) and Screenshot 4 ('WAYMO-SF72' is oversized).",
+      "fix_hint": "Clamp the maximum screen-space scale of 3D billboard labels or render them with fixed pixel size in 2D screen space."
+    },
+    {
+      "criterion": "sf_realism",
+      "issue": "Buildings and streetscapes are very blocky and untextured compared to real San Francisco streets, and floating/misaligned planter boxes sit in the middle of the road.",
+      "evidence": "Screenshots 4 and 5 show low-poly bushes in terracotta boxes sitting directly on the yellow centerlines of the road heading toward the bridge.",
+      "fix_hint": "Add proper architectural detail (cornices, bay window trim, brick/stucco textures, sidewalks) and move median planters off active traffic lanes."
+    },
+    {
+      "criterion": "sf_landmarks",
+      "issue": "Only the Golden Gate Bridge and a hint of Lombard-style planters are visible; major SF skyline landmarks like the Bay Bridge, Transamerica Pyramid, Salesforce Tower, and cable cars are absent from the view.",
+      "evidence": "Screenshots 0-5 only show the orange Golden Gate Bridge towers ahead.",
+      "fix_hint": "Place visible skyline landmarks (Transamerica Pyramid, Salesforce Tower, Coit Tower, Bay Bridge) around the city horizon and add cable car tracks/cars on hilly streets."
+    },
+    {
+      "criterion": "visual_polish",
+      "issue": "Framerate degrades significantly during driving and firing lasers, dropping from 44 FPS down to 16-20 FPS.",
+      "evidence": "Telemetry steps 3-7 show FPS dropping to 19, 18, 20, 20, and 16 FPS.",
+      "fix_hint": "Optimize geometry draw calls by instancing buildings/street props, and reduce expensive per-frame DOM updates or heavy shader passes."
+    },
+    {
+      "criterion": "visual_polish",
+      "issue": "Severe white fog/haze and over-exposure completely wash out the buildings, sky, and distant landmarks, destroying contrast.",
+      "evidence": "All screenshots (especially Screenshot 0, 3, and 5) show buildings turning into pure white silhouettes just half a block away.",
+      "fix_hint": "Drastically reduce fog density or push fog far distance much further back, reduce directional/ambient light intensity, and add a crisp blue skybox for sunny daytime contrast."
+    },
+    {
+      "criterion": "sf_realism",
+      "issue": "Lombard-style planter boxes and bushes are floating in the middle of a normal straight road and clipping awkwardly into the hill slope.",
+      "evidence": "Screenshot 4 and 5 (and video 00:23-00:28) show red brick planters hovering above the asphalt on the right lane.",
+      "fix_hint": "Conform planter geometry heights to the terrain/road pitch and place them properly within a dedicated median or crooked street section rather than blocking active traffic lanes."
+    },
+    {
+      "criterion": "visual_polish",
+      "issue": "3D floating enemy nameplates do not scale clamping properly, becoming giant and covering the screen when close.",
+      "evidence": "Video 00:07 shows 'WAYMO-SF12' text scaling up to cover the entire bottom-right quadrant of the screen.",
+      "fix_hint": "Clamp the maximum screen-space scale of 3D billboard text or fade out nameplates when enemies get very close to the camera."
+    }
+  ],
+  "total": 36.0,
+  "usage": {
+    "in": 6775,
+    "out": 801
+  },
+  "sample_totals": [
+    36.0,
+    35
+  ],
+  "errors": 0,
+  "fps": 20
+}

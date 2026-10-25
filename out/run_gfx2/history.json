@@ -1,0 +1,58 @@
+[
+  {
+    "iter": 0,
+    "accepted": true,
+    "total": 26.0,
+    "scores": {
+      "waymo_look": 5.0,
+      "sf_realism": 5.0,
+      "laser_tag_fun": 6.0,
+      "driving_feel": 4.5,
+      "visual_polish": 4.0,
+      "sf_landmarks": 1.5
+    },
+    "errors": 0
+  },
+  {
+    "iter": 1,
+    "accepted": true,
+    "total": 36.0,
+    "scores": {
+      "waymo_look": 7.0,
+      "sf_realism": 5.0,
+      "laser_tag_fun": 6.5,
+      "driving_feel": 7.0,
+      "visual_polish": 4.5,
+      "sf_landmarks": 6.0
+    },
+    "errors": 0,
+    "fps": 20,
+    "too_slow": false,
+    "seconds": 181,
+    "in": 45485,
+    "out": 13895,
+    "edits_applied": 10,
+    "edits_total": 10
+  },
+  {
+    "iter": 2,
+    "accepted": false,
+    "total": 31.5,
+    "scores": {
+      "waymo_look": 6.0,
+      "sf_realism": 4.5,
+      "laser_tag_fun": 6.5,
+      "driving_feel": 5.0,
+      "visual_polish": 4.5,
+      "sf_landmarks": 5.0
+    },
+    "errors": 0,
+    "fps": 17,
+    "too_slow": false,
+    "seconds": 246,
+    "in": 46302,
+    "out": 18488,
+    "edits_applied": 9,
+    "edits_total": 9
+  }
+]

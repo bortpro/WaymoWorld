@@ -1,0 +1,72 @@
+{
+  "scores": {
+    "waymo_look": 6.0,
+    "sf_realism": 4.5,
+    "laser_tag_fun": 6.5,
+    "driving_feel": 5.0,
+    "visual_polish": 4.5,
+    "sf_landmarks": 5.0
+  },
+  "summary": "A solid low-poly foundation with recognizable Waymo sensor suites, Victorian row houses, steep hills, and active laser tag combat. However, visual clarity is hurt by heavy white fog washing out the scene, buildings sunken behind massive grey concrete retaining walls on slopes, and the player car scraping stuck along a wall in the latter half of the drive while FPS dips to 13-18.",
+  "top_issues": [
+    {
+      "criterion": "visual_polish",
+      "issue": "Heavy white distance fog washes out the sky, horizon, and distant buildings/landmarks, making the daytime scene look overly hazy and low-contrast.",
+      "evidence": "Screenshots 0-5 show a thick white haze starting only a couple of blocks away, washing out the Golden Gate Bridge and distant row houses.",
+      "fix_hint": "Reduce fog density or push fog start/end distances much further back, and use a crisp blue skybox with stronger directional sunlight contrast."
+    },
+    {
+      "criterion": "sf_realism",
+      "issue": "Giant untextured grey concrete retaining walls block the lower floors of Victorian buildings along sloped streets, and buildings clip into the terrain.",
+      "evidence": "Screenshots 0, 3, 4, and 5 show massive blank grey walls along the left sidewalk that obscure the houses behind them.",
+      "fix_hint": "Step individual buildings down the slope with proper foundations/stairs flush with the sidewalk instead of placing huge grey block walls in front of them."
+    },
+    {
+      "criterion": "driving_feel",
+      "issue": "Player car gets wedged against the left retaining wall after turning and scrapes along it without rebounding or steering clear easily; framerate also drops to 13-18 FPS.",
+      "evidence": "Video 00:18-00:29 and Screenshots 3-5 show the car pressed against the left grey wall with X coordinate frozen at -71.34 in telemetry while FPS drops to 13.",
+      "fix_hint": "Add smooth wall-sliding collision response that nudges the car away from walls, increase steering authority, and optimize draw calls/shadow maps to keep 60 FPS."
+    },
+    {
+      "criterion": "waymo_look",
+      "issue": "The car body is very boxy and upright rather than having the sleek sloped coupe SUV silhouette of a Jaguar I-PACE, and hit/exhaust particles look like giant floating low-poly cubes.",
+      "evidence": "Screenshots 1, 2, 4, and 5 show a boxy rear hatch and large orange/green cubes floating around the car.",
+      "fix_hint": "Taper the roofline and rear hatch for a sleeker I-PACE profile, and make hit/spark particles smaller, brighter, and shorter-lived."
+    },
+    {
+      "criterion": "sf_landmarks",
+      "issue": "The Golden Gate Bridge cable and tower geometry looks misaligned/floating in the sky, and other iconic downtown/waterfront landmarks (Bay Bridge, Transamerica Pyramid, Coit Tower) are hard to spot.",
+      "evidence": "Screenshots 0, 4, and 5 show a single thin red cable stretching awkwardly up into the top of the frame ahead of the road.",
+      "fix_hint": "Fix the suspension bridge catenary cable geometry and placement, and place prominent, clearly visible silhouettes of the Transamerica Pyramid, Salesforce Tower, and Bay Bridge on the horizon."
+    },
+    {
+      "criterion": "visual_polish",
+      "issue": "Heavy white fog washes out the entire scene, reducing contrast and obscuring distant landmarks and buildings.",
+      "evidence": "All screenshots (0 to 5) show a dense white haze starting just a block away, turning the sky and background into flat white.",
+      "fix_hint": "Remove or drastically push back the scene fog and use a clear, vibrant blue daytime skybox with crisp directional sunlight and stronger shadow contrast."
+    },
+    {
+      "criterion": "sf_realism",
+      "issue": "Massive, flat, untextured gray retaining walls dominate the roadsides on hills instead of realistic stepped sidewalks and building foundations.",
+      "evidence": "Screenshot 0 (left/right), Screenshot 3 (center intersection corner), and Screenshot 5 (left wall) show huge blank gray blocks towering over the car.",
+      "fix_hint": "Adjust building placement so houses sit directly at the sloped street level with proper foundation textures, stairs, garage doors, and sidewalks rather than giant gray cubes."
+    },
+    {
+      "criterion": "driving_feel",
+      "issue": "Low framerate (13-20 FPS) and sluggish turning cause the player vehicle to scrape along roadside walls rather than cleanly navigating intersections.",
+      "evidence": "Telemetry shows FPS dropping to 13-18 FPS during movement; video 00:22-00:29 and Screenshots 4-5 show the car pressed against the left retaining wall with constant collision particles.",
+      "fix_hint": "Optimize geometry/draw calls (e.g., merge static building meshes or use instancing) to hit 60 FPS, and increase steering responsiveness and wall-bounce recovery."
+    }
+  ],
+  "total": 31.5,
+  "usage": {
+    "in": 6845,
+    "out": 855
+  },
+  "sample_totals": [
+    31.5,
+    28
+  ],
+  "errors": 0,
+  "fps": 17
+}
