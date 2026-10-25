@@ -16,6 +16,7 @@ A multiplayer browser game: players drive Waymos around a city and shoot lasers 
 
 - WebSocket endpoint: `wss://waymoworld-server.onrender.com/ws`
 - Health check: `https://waymoworld-server.onrender.com/health` returns `{ ok, clients, players }`
+- Debug dashboard: `https://waymoworld-server.onrender.com/debug?token=<DEBUG_TOKEN>` (see below)
 
 ## Layout
 
@@ -23,7 +24,8 @@ A multiplayer browser game: players drive Waymos around a city and shoot lasers 
 index.html          # Whole frontend: one HTML file with an inline ES module, Three.js r160 from jsDelivr via importmap
 backend/
   package.json      # Node >= 20, ESM, sole dependency: ws
-  src/server.js     # HTTP server (/health) + WebSocketServer on /ws, player registry, 20 Hz snapshots, hit validation, 30s ping/pong heartbeat
+  src/server.js     # HTTP server (/health, /debug) + WebSocketServer on /ws, player registry, 20 Hz snapshots, hit validation, 30s ping/pong heartbeat
+  src/debug.html    # Debug dashboard page served at /debug
 ```
 
 ## Running locally
@@ -47,6 +49,18 @@ Local WebSocket URL: `ws://localhost:8080/ws`
 The frontend picks its server automatically: `ws://localhost:8080/ws` when served from `localhost` / `127.0.0.1` / `file://`, otherwise `wss://waymoworld-server.onrender.com/ws`. Override with `?server=ws://host:port/ws`.
 
 To test multiplayer locally, open the page in two browser windows.
+
+## Debug dashboard
+
+`/debug` is a live view of all server state. It polls `/debug/state` (JSON) every 0.25 to 5 s and shows:
+- an overview: uptime, sockets, players, spectators, message rates, memory
+- a top-down map of players with heading, HP, and hit range
+- every player field (position, HP, live shots, spawn protection, how long since their last state update)
+- every socket (IP, user agent, message counts, send buffer)
+- counters, including messages by type and shots or hits rejected by reason
+- config, a log of the last 200 events (connect, join, hit, hit-rejected, kill, leave, …), and the raw JSON
+
+Access: with no `DEBUG_TOKEN` env var set, it only answers direct localhost requests (`http://localhost:8080/debug`). On Render, set `DEBUG_TOKEN` in the service's environment and open `/debug?token=<value>`. The page includes player IPs, so keep the token private.
 
 ## Multiplayer model
 
