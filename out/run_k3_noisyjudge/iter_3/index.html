@@ -1,0 +1,2013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waymo World: SF Laser Tag</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #000;
+            user-select: none;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 2;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px 40px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .title-box h1 {
+            margin: 0;
+            font-size: 28px;
+            letter-spacing: 2px;
+            color: #00f0ff;
+            text-transform: uppercase;
+        }
+        .title-box p {
+            margin: 0;
+            font-size: 12px;
+            color: #aaa;
+        }
+        .stats-box {
+            display: flex;
+            gap: 30px;
+            font-size: 24px;
+            font-weight: bold;
+            align-items: center;
+        }
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .stat span {
+            font-size: 12px;
+            color: #00f0ff;
+            text-transform: uppercase;
+        }
+        .hud-bottom {
+            padding: 30px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+        }
+        .bars {
+            width: 300px;
+        }
+        .bar-container {
+            margin-bottom: 10px;
+        }
+        .bar-label {
+            color: #fff;
+            font-size: 12px;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .bar-bg {
+            width: 100%;
+            height: 12px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        #health-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00b8ff);
+            transition: width 0.2s;
+        }
+        #energy-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff0055, #ff00ff);
+            transition: width 0.1s;
+        }
+        #radar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 2px solid #00f0ff;
+            background: rgba(0, 20, 40, 0.6);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+        }
+        #radar::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 6px; height: 6px;
+            background: #fff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        #radar-sweep {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 75px; height: 75px;
+            background: linear-gradient(45deg, rgba(0, 240, 255, 0.5) 0%, transparent 70%);
+            transform-origin: 0 0;
+            animation: sweep 2s infinite linear;
+        }
+        @keyframes sweep {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        #crosshair {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 1px dashed rgba(0, 240, 255, 0.6);
+            border-radius: 50%;
+        }
+        #crosshair::before, #crosshair::after {
+            content: '';
+            position: absolute;
+            background: #00f0ff;
+        }
+        #crosshair::before { top: 19px; left: -5px; width: 10px; height: 2px; }
+        #crosshair::after { top: 19px; right: -5px; width: 10px; height: 2px; }
+        
+        #overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(5, 10, 20, 0.85);
+            backdrop-filter: blur(10px);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            text-align: center;
+        }
+        #overlay h1 {
+            font-size: 64px;
+            margin: 0;
+            background: linear-gradient(45deg, #00f0ff, #ff00aa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+        #overlay p {
+            font-size: 18px;
+            color: #ccc;
+            max-width: 600px;
+            line-height: 1.6;
+            margin: 20px 0 40px 0;
+        }
+        .controls-grid {
+            display: grid;
+            grid-template-columns: auto auto;
+            gap: 15px 30px;
+            text-align: left;
+            background: rgba(255,255,255,0.05);
+            padding: 20px 40px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            margin-bottom: 40px;
+        }
+        .key {
+            background: #222;
+            border: 1px solid #00f0ff;
+            padding: 4px 10px;
+            border-radius: 4px;
+            color: #00f0ff;
+            font-weight: bold;
+            text-align: center;
+        }
+        button {
+            padding: 15px 50px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(90deg, #00b8ff, #00ff88);
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
+            transition: transform 0.2s, box-shadow 0.2s;
+            pointer-events: auto;
+        }
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.8);
+        }
+        #kill-feed {
+            position: absolute;
+            top: 100px;
+            right: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            align-items: flex-end;
+        }
+        .feed-item {
+            background: rgba(0,0,0,0.6);
+            border-right: 3px solid #00f0ff;
+            color: #fff;
+            padding: 5px 15px;
+            font-size: 14px;
+            border-radius: 4px 0 0 4px;
+            animation: fadeOut 4s forwards;
+        }
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: translateX(20px); }
+            10% { transform: translateX(0); }
+            80% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        .damage-flash {
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            box-shadow: inset 0 0 100px rgba(255, 0, 50, 0.8);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.1s;
+            z-index: 5;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div class="damage-flash" id="damage-flash"></div>
+    
+    <div id="ui-layer">
+        <div class="hud-top">
+            <div class="title-box">
+                <h1>Waymo World</h1>
+                <p>Autonomous SF Laser Tag Division</p>
+            </div>
+            <div class="stats-box">
+                <div class="stat">
+                    <div id="score-val">0</div>
+                    <span>Tags (Kills)</span>
+                </div>
+                <div class="stat">
+                    <div id="bots-val">15</div>
+                    <span>Active Units</span>
+                </div>
+                <div class="stat">
+                    <div id="speed-val">0</div>
+                    <span>MPH</span>
+                </div>
+            </div>
+        </div>
+        
+        <div id="crosshair"></div>
+        <div id="kill-feed"></div>
+
+        <div class="hud-bottom">
+            <div class="bars">
+                <div class="bar-container">
+                    <div class="bar-label"><span>LIDAR Integrity (Armor)</span><span id="hp-text">100%</span></div>
+                    <div class="bar-bg"><div id="health-bar"></div></div>
+                </div>
+                <div class="bar-container">
+                    <div class="bar-label"><span>Laser Capacitor</span><span id="en-text">100%</span></div>
+                    <div class="bar-bg"><div id="energy-bar"></div></div>
+                </div>
+            </div>
+            <div id="radar">
+                <div id="radar-sweep"></div>
+                <div id="radar-dots"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="overlay">
+        <h1>Waymo World</h1>
+        <p>Welcome to San Francisco. The humans are asleep, and the autonomous fleet has engaged in a city-wide game of high-voltage Laser Tag. Navigate the hills, dodge the Transamerica Pyramid, and tag rogue units using your roof-mounted LiDAR cannon.</p>
+        <div class="controls-grid">
+            <div class="key">W / S or ↑ / ↓</div><div>Throttle / Brake & Reverse</div>
+            <div class="key">A / D or ← / →</div><div>Steer Left / Right</div>
+            <div class="key">SPACE or CLICK</div><div>Fire Roof Laser</div>
+            <div class="key">SHIFT</div><div>Overclock Motor (Boost)</div>
+        </div>
+        <button id="start-btn">Initialize System</button>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        // --- SOUND ENGINE (Web Audio API) ---
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.engineOsc = null;
+                this.engineGain = null;
+            }
+            init() {
+                if (this.ctx) return;
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // EV Hum
+                this.engineOsc = this.ctx.createOscillator();
+                this.engineGain = this.ctx.createGain();
+                this.engineOsc.type = 'sine';
+                this.engineOsc.frequency.value = 100;
+                this.engineGain.gain.value = 0.02;
+                this.engineOsc.connect(this.engineGain);
+                this.engineGain.connect(this.ctx.destination);
+                this.engineOsc.start();
+            }
+            updateEngine(speedRatio) {
+                if (!this.ctx) return;
+                this.engineOsc.frequency.setTargetAtTime(80 + Math.abs(speedRatio) * 300, this.ctx.currentTime, 0.1);
+                this.engineGain.gain.setTargetAtTime(0.02 + Math.abs(speedRatio) * 0.05, this.ctx.currentTime, 0.1);
+            }
+            playLaser(isPlayer = true) {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(isPlayer ? 800 : 600, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.15);
+                
+                gain.gain.setValueAtTime(isPlayer ? 0.15 : 0.05, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+            playHit() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.2);
+                
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+            playExplosion() {
+                if (!this.ctx) return;
+                const bufferSize = this.ctx.sampleRate * 0.5;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(800, this.ctx.currentTime);
+                filter.frequency.linearRampToValueAtTime(50, this.ctx.currentTime + 0.5);
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start();
+            }
+        }
+        const sound = new SoundEngine();
+
+        // --- WORLD CONFIG & GLOBALS ---
+        const WORLD_SIZE = 1200;
+        const GRID_STEPS = 12; // Number of blocks
+        const BLOCK_SIZE = 70;
+        const STREET_WIDTH = 30;
+        const CELL_SIZE = BLOCK_SIZE + STREET_WIDTH; // 100
+        const OFFSET = (GRID_STEPS * CELL_SIZE) / 2;
+
+        let scene, camera, renderer, composer;
+        let player;
+        let bots = [];
+        let lasers = [];
+        let particles = [];
+        let buildings = []; // Bounding boxes for collision
+        let gameActive = false;
+        let score = 0;
+        let totalLasersFired = 0;
+        let lastFps = 60;
+        let stuckCounter = 0;
+        let lastPlayerPos = new THREE.Vector3();
+        let beamTraces = [];
+        let clock = new THREE.Clock();
+
+        window.__waymo = {
+            player: { x: 0, y: 0, z: 0, speed: 0 },
+            enemiesVisible: 0,
+            enemiesTotal: 15,
+            tags: 0,
+            lasersFired: 0,
+            fps: 60,
+            stuck: false
+        };
+
+        // Inputs
+        const keys = { w: false, a: false, s: false, d: false, space: false, shift: false };
+
+        // --- PROCEDURAL TEXTURES ---
+        function createWaymoDoorTexture(isPlayer) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#f8f9fb';
+            ctx.fillRect(0, 0, 512, 256);
+
+            // Subtle lower body molding line
+            ctx.fillStyle = '#d8dde6';
+            ctx.fillRect(0, 215, 512, 18);
+
+            // Waymo "W" emblem & wordmark on front doors
+            ctx.fillStyle = '#0077ff';
+            ctx.font = 'bold 34px "Segoe UI", Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('WAYMO', 256, 125);
+
+            ctx.strokeStyle = '#00e5be';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(195, 140);
+            ctx.lineTo(317, 140);
+            ctx.stroke();
+
+            // Jaguar I-PACE front fender vent detail
+            ctx.fillStyle = '#22262c';
+            ctx.fillRect(60, 75, 18, 8);
+            ctx.fillRect(434, 75, 18, 8);
+
+            // Unit number
+            ctx.fillStyle = isPlayer ? '#0088ff' : '#cc2255';
+            ctx.font = 'bold 18px monospace';
+            ctx.fillText(isPlayer ? 'UNIT 01' : 'AUTONOMOUS', 256, 168);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.anisotropy = 8;
+            return tex;
+        }
+
+        function createBuildingTexture(baseColor, isBrick = false) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = baseColor;
+            ctx.fillRect(0, 0, 256, 512);
+
+            if (isBrick) {
+                // Detailed SoMa brick & concrete spandrel facade (matching reference photos)
+                ctx.fillStyle = 'rgba(0,0,0,0.08)';
+                for (let y = 0; y < 512; y += 6) {
+                    ctx.fillRect(0, y, 256, 1.5);
+                }
+                // Vertical brick piers
+                ctx.fillStyle = 'rgba(255,255,255,0.12)';
+                for (let x = 0; x < 256; x += 64) {
+                    ctx.fillRect(x, 0, 8, 512);
+                }
+            }
+
+            // Horizontal stone spandrel & cornice bands (SF Edwardian/commercial style like reference photos)
+            ctx.fillStyle = isBrick ? '#dcd8d0' : 'rgba(255,255,255,0.34)';
+            for (let y = 0; y < 512; y += 64) {
+                ctx.fillRect(0, y, 256, 7);
+            }
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            for (let y = 7; y < 512; y += 64) {
+                ctx.fillRect(0, y, 256, 3);
+            }
+
+            // Ground-floor retail/garage storefront band at bottom
+            ctx.fillStyle = '#2d3238';
+            ctx.fillRect(0, 448, 256, 64);
+            ctx.fillStyle = '#d8d4cc';
+            ctx.fillRect(0, 444, 256, 6);
+            
+            const rows = 8;
+            const cols = 4;
+            const padX = 12;
+            const padY = 14;
+            const w = (256 - padX * (cols + 1)) / cols;
+            const h = (512 - padY * (rows + 1)) / rows;
+            
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const wx = padX + c * (w + padX);
+                    const wy = padY + r * (h + padY);
+                    // White window trim & sill
+                    ctx.fillStyle = '#f0f0ec';
+                    ctx.fillRect(wx - 2, wy - 2, w + 4, h + 4);
+                    ctx.fillStyle = '#c8c4bc';
+                    ctx.fillRect(wx - 4, wy + h + 1, w + 8, 3);
+
+                    // Daytime reflective sky-tinted glass
+                    const glassTone = (r + c) % 3 === 0 ? '#4d6a88' : (Math.random() > 0.4 ? '#364f68' : '#5e7b98');
+                    ctx.fillStyle = glassTone;
+                    ctx.fillRect(wx, wy, w, h);
+
+                    // Interior Venetian blinds / upper reflection (like the brick building in reference photos)
+                    ctx.fillStyle = (r * 3 + c) % 4 === 0 ? 'rgba(240, 236, 225, 0.55)' : 'rgba(215, 235, 255, 0.32)';
+                    ctx.fillRect(wx + 1, wy + 1, w - 2, h * 0.42);
+
+                    // Mullion bars (3-part SF commercial bay window panes)
+                    ctx.fillStyle = '#e5e5e0';
+                    ctx.fillRect(wx, wy + h * 0.48, w, 2);
+                    ctx.fillRect(wx + w * 0.28, wy, 1.5, h);
+                    ctx.fillRect(wx + w * 0.72, wy, 1.5, h);
+                }
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.anisotropy = 4;
+            return tex;
+        }
+
+        function createRoadTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            // Concrete Sidewalk
+            ctx.fillStyle = '#b4b8be';
+            ctx.fillRect(0, 0, 512, 512);
+
+            // Road base (realistic daytime weathered SF asphalt gray)
+            const roadPx = (STREET_WIDTH / CELL_SIZE) * 512;
+            const blockPx = 512 - roadPx;
+
+            ctx.fillStyle = '#5a6069';
+            // Horizontal road
+            ctx.fillRect(0, 0, 512, roadPx);
+            // Vertical road
+            ctx.fillRect(0, 0, roadPx, 512);
+
+            // Asphalt patch & crack variations (like SF reference photos)
+            ctx.fillStyle = '#4e545c';
+            ctx.fillRect(roadPx * 0.2, roadPx * 0.1, roadPx * 0.6, roadPx * 0.5);
+            ctx.fillRect(roadPx + 40, 20, 90, 45);
+            ctx.fillRect(25, roadPx + 70, 50, 110);
+
+            // White limit lines at intersections
+            ctx.fillStyle = '#e8ecf0';
+            ctx.fillRect(roadPx + 4, 6, 4, roadPx - 12);
+            ctx.fillRect(6, roadPx + 4, roadPx - 12, 4);
+
+            // Double yellow lines
+            ctx.strokeStyle = '#e5b535';
+            ctx.lineWidth = 2;
+            const mid = roadPx / 2;
+            
+            ctx.beginPath();
+            ctx.moveTo(roadPx + 18, mid - 2); ctx.lineTo(512, mid - 2);
+            ctx.moveTo(roadPx + 18, mid + 2); ctx.lineTo(512, mid + 2);
+            ctx.moveTo(mid - 2, roadPx + 18); ctx.lineTo(mid - 2, 512);
+            ctx.moveTo(mid + 2, roadPx + 18); ctx.lineTo(mid + 2, 512);
+            ctx.stroke();
+
+            // Crosswalks & yellow ADA tactile curb ramps
+            ctx.fillStyle = '#e8ecf0';
+            for(let i = 10; i < roadPx - 10; i += 14) {
+                ctx.fillRect(roadPx + 10, i, 16, 7);
+                ctx.fillRect(i, roadPx + 10, 7, 16);
+            }
+            ctx.fillStyle = '#f2c516';
+            ctx.fillRect(roadPx + 2, roadPx + 2, 10, 5);
+            ctx.fillRect(roadPx + 2, roadPx + 2, 5, 10);
+
+            // Manhole covers & utility markings (like reference photos)
+            ctx.fillStyle = '#3d4147';
+            ctx.beginPath();
+            ctx.arc(mid + 12, mid - 8, 5, 0, Math.PI * 2);
+            ctx.arc(roadPx + 80, mid + 14, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#ff6b35';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(mid - 20, mid + 10, 10, 6);
+
+            // Building Foundation Plot
+            ctx.fillStyle = '#8d9299';
+            ctx.fillRect(roadPx + 14, roadPx + 14, blockPx - 28, blockPx - 28);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(GRID_STEPS, GRID_STEPS);
+            tex.anisotropy = 16;
+            return tex;
+        }
+
+        // --- SF ELEVATION FUNCTION ---
+        function getElevation(x, z) {
+            // Bay on the East side (x > 420)
+            if (x > 450) return -6;
+            
+            // Smooth transition to Embarcadero waterfront
+            let bayFactor = 1;
+            if (x > 260) {
+                bayFactor = Math.max(0, 1 - ((x - 260) / 190));
+            }
+
+            // Smooth, drivable SF Hills (Nob Hill, Russian Hill, SoMa grade)
+            // Gentle wavelengths so streets & intersections never form steep walls or cliffs
+            let h = 2.0;
+            h += (Math.sin(x * 0.0045) * Math.cos(z * 0.0045) + 1) * 9;
+            // Smooth central hill crest
+            const d1Sq = (x + 120) * (x + 120) + (z - 80) * (z - 80);
+            h += 22 * Math.exp(-d1Sq / 55000);
+            // Secondary hill crest
+            const d2Sq = (x - 80) * (x - 80) + (z + 180) * (z + 180);
+            h += 16 * Math.exp(-d2Sq / 48000);
+
+            return h * bayFactor;
+        }
+
+        function getTerrainNormal(x, z) {
+            const d = 1.0;
+            const hL = getElevation(x - d, z);
+            const hR = getElevation(x + d, z);
+            const hD = getElevation(x, z - d);
+            const hU = getElevation(x, z + d);
+            const normal = new THREE.Vector3(hL - hR, 2.0 * d, hD - hU);
+            normal.normalize();
+            return normal;
+        }
+
+        // --- WAYMO CAR GENERATOR (Jaguar I-PACE 5th-Gen Waymo Driver) ---
+        function createWaymoMesh(isPlayer = false) {
+            const group = new THREE.Group();
+
+            // Materials
+            const bodyMat = new THREE.MeshStandardMaterial({ 
+                color: 0xf8f9fb, 
+                roughness: 0.18, 
+                metalness: 0.12 
+            });
+            const doorMat = new THREE.MeshStandardMaterial({
+                map: createWaymoDoorTexture(isPlayer),
+                roughness: 0.2,
+                metalness: 0.1
+            });
+            const glassMat = new THREE.MeshStandardMaterial({ 
+                color: 0x16222f, 
+                roughness: 0.08, 
+                metalness: 0.85 
+            });
+            const darkMat = new THREE.MeshStandardMaterial({ color: 0x181a1f, roughness: 0.4, metalness: 0.3 });
+            const sensorLensMat = new THREE.MeshStandardMaterial({ color: 0x05070a, roughness: 0.05, metalness: 0.9 });
+            const rimMat = new THREE.MeshStandardMaterial({ color: 0xd0d5dd, roughness: 0.25, metalness: 0.8 });
+            const accentColor = isPlayer ? 0x00f0ff : 0xff0055;
+            const lidarRingMat = new THREE.MeshStandardMaterial({ 
+                color: accentColor, 
+                emissive: accentColor,
+                emissiveIntensity: 2.5
+            });
+            const headlightMat = new THREE.MeshStandardMaterial({ 
+                color: 0xffffff, emissive: 0xd8f0ff, emissiveIntensity: 2.0 
+            });
+            const taillightMat = new THREE.MeshStandardMaterial({ 
+                color: 0xff1122, emissive: 0xff1122, emissiveIntensity: 1.8 
+            });
+
+            // Lower Rocker / Underbody
+            const underGeo = new THREE.BoxGeometry(2.04, 0.22, 4.45);
+            const under = new THREE.Mesh(underGeo, darkMat);
+            under.position.set(0, 0.36, 0);
+            group.add(under);
+
+            // Main Lower SUV Body with Waymo Door Branding on sides
+            const bodyMaterials = [
+                doorMat, // Left/Right side
+                doorMat,
+                bodyMat, // Top
+                darkMat, // Bottom
+                bodyMat, // Front
+                bodyMat  // Rear
+            ];
+            const chassisGeo = new THREE.BoxGeometry(2.08, 0.68, 4.55);
+            const chassis = new THREE.Mesh(chassisGeo, bodyMaterials);
+            chassis.position.y = 0.76;
+            chassis.castShadow = true;
+            chassis.receiveShadow = true;
+            group.add(chassis);
+
+            // Sculpted Sloped Front Hood (I-PACE cab-forward aero hood)
+            const hoodGeo = new THREE.BoxGeometry(1.96, 0.22, 1.35);
+            const hood = new THREE.Mesh(hoodGeo, bodyMat);
+            hood.position.set(0, 1.08, 1.55);
+            hood.rotation.x = 0.14;
+            hood.castShadow = true;
+            group.add(hood);
+
+            // Jaguar Front Grille (oval/trapezoid black mesh)
+            const grilleGeo = new THREE.BoxGeometry(1.2, 0.28, 0.08);
+            const grille = new THREE.Mesh(grilleGeo, darkMat);
+            grille.position.set(0, 0.78, 2.29);
+            group.add(grille);
+
+            // Coupe-SUV Sloped Cabin Greenhouse
+            const cabinGeo = new THREE.BoxGeometry(1.78, 0.56, 2.45);
+            const cabin = new THREE.Mesh(cabinGeo, glassMat);
+            cabin.position.set(0, 1.32, -0.15);
+            cabin.castShadow = true;
+            group.add(cabin);
+
+            // Raked Front Windshield
+            const frontWindshieldGeo = new THREE.BoxGeometry(1.72, 0.58, 0.95);
+            const frontWindshield = new THREE.Mesh(frontWindshieldGeo, glassMat);
+            frontWindshield.position.set(0, 1.28, 0.85);
+            frontWindshield.rotation.x = 0.52;
+            group.add(frontWindshield);
+
+            // Fastback Sloped Rear Glass + White C-Pillars (signature I-PACE coupe silhouette)
+            const rearGlassGeo = new THREE.BoxGeometry(1.70, 0.52, 1.15);
+            const rearGlass = new THREE.Mesh(rearGlassGeo, glassMat);
+            rearGlass.position.set(0, 1.30, -1.25);
+            rearGlass.rotation.x = -0.46;
+            group.add(rearGlass);
+
+            // White Roof Arch & Spoiler Lip
+            const roofGeo = new THREE.BoxGeometry(1.80, 0.10, 2.25);
+            const roof = new THREE.Mesh(roofGeo, bodyMat);
+            roof.position.set(0, 1.61, -0.15);
+            group.add(roof);
+
+            const spoilerGeo = new THREE.BoxGeometry(1.74, 0.08, 0.32);
+            const spoiler = new THREE.Mesh(spoilerGeo, bodyMat);
+            spoiler.position.set(0, 1.56, -1.42);
+            group.add(spoiler);
+
+            // Kammback Rear Tailgate
+            const tailgateGeo = new THREE.BoxGeometry(1.98, 0.45, 0.45);
+            const tailgate = new THREE.Mesh(tailgateGeo, bodyMat);
+            tailgate.position.set(0, 1.05, -2.08);
+            group.add(tailgate);
+
+            // --- WAYMO 5TH-GEN ROOF LIDAR & SENSOR SUITE ---
+            // White sculpted roof rack / sensor fairing
+            const rackGeo = new THREE.CylinderGeometry(0.45, 0.68, 0.16, 20);
+            const rack = new THREE.Mesh(rackGeo, bodyMat);
+            rack.position.set(0, 1.72, 0.0);
+            group.add(rack);
+
+            // Tall Cylindrical Spinning LiDAR Dome (Black optical window + white cap + laser emitter)
+            const lidarTurret = new THREE.Group();
+            lidarTurret.position.set(0, 1.98, 0.0);
+
+            const lidarDrumGeo = new THREE.CylinderGeometry(0.28, 0.31, 0.38, 24);
+            const lidarDrum = new THREE.Mesh(lidarDrumGeo, sensorLensMat);
+            lidarTurret.add(lidarDrum);
+
+            const lidarCapGeo = new THREE.CylinderGeometry(0.27, 0.28, 0.07, 24);
+            const lidarCap = new THREE.Mesh(lidarCapGeo, bodyMat);
+            lidarCap.position.y = 0.22;
+            lidarTurret.add(lidarCap);
+
+            // Glowing Laser Tag Emitter Ring & Lens
+            const ringGeo = new THREE.CylinderGeometry(0.295, 0.295, 0.08, 24);
+            const ring = new THREE.Mesh(ringGeo, lidarRingMat);
+            ring.position.y = 0.05;
+            lidarTurret.add(ring);
+
+            const barrelGeo = new THREE.CylinderGeometry(0.07, 0.09, 0.45, 12);
+            barrelGeo.rotateX(Math.PI / 2);
+            const barrel = new THREE.Mesh(barrelGeo, lidarRingMat);
+            barrel.position.set(0, 0.08, 0.22);
+            lidarTurret.add(barrel);
+
+            group.add(lidarTurret);
+            group.userData.turret = lidarTurret;
+
+            // Corner Perimeter LiDARs & Front Fender / Mirror / Bumper Sensor Pods
+            const podGeo = new THREE.CylinderGeometry(0.11, 0.13, 0.14, 14);
+            const roofPods = [
+                [0.62, 1.68, 0.72], [-0.62, 1.68, 0.72],   // Front roof corners
+                [0.62, 1.66, -1.05], [-0.62, 1.66, -1.05]  // Rear roof corners
+            ];
+            roofPods.forEach(pos => {
+                const p = new THREE.Mesh(podGeo, darkMat);
+                p.position.set(...pos);
+                group.add(p);
+            });
+
+            // Front fender & side mirror sensor pods (white housings with black cylindrical lidar)
+            const fenderSensors = [
+                [1.06, 0.98, 1.55], [-1.06, 0.98, 1.55], // Front fenders
+                [1.14, 1.15, 0.70], [-1.14, 1.15, 0.70], // Side mirror pods
+                [0, 1.12, 2.28], [0, 1.18, -2.28]        // Front nose & rear tailgate radar/lidar
+            ];
+            fenderSensors.forEach(pos => {
+                const podGroup = new THREE.Group();
+                podGroup.position.set(...pos);
+                const base = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.12, 0.26), bodyMat);
+                const puck = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.12, 12), sensorLensMat);
+                puck.position.y = 0.06;
+                podGroup.add(base, puck);
+                group.add(podGroup);
+            });
+
+            // Subtle team identification underglow strip
+            const stripeGeo = new THREE.BoxGeometry(2.11, 0.06, 3.2);
+            const stripe = new THREE.Mesh(stripeGeo, lidarRingMat);
+            stripe.position.set(0, 0.42, 0);
+            group.add(stripe);
+
+            // Lights
+            const hlGeo = new THREE.BoxGeometry(0.38, 0.11, 0.12);
+            const hlL = new THREE.Mesh(hlGeo, headlightMat);
+            hlL.position.set(0.74, 0.86, 2.26);
+            const hlR = hlL.clone();
+            hlR.position.x = -0.74;
+            group.add(hlL, hlR);
+
+            const tlGeo = new THREE.BoxGeometry(1.85, 0.10, 0.1);
+            const tl = new THREE.Mesh(tlGeo, taillightMat);
+            tl.position.set(0, 1.05, -2.29);
+            group.add(tl);
+
+            // Wheels & Alloy Rims
+            const tireGeo = new THREE.CylinderGeometry(0.42, 0.42, 0.28, 20);
+            tireGeo.rotateZ(Math.PI / 2);
+            const wheelRimGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.30, 12);
+            wheelRimGeo.rotateZ(Math.PI / 2);
+
+            const wheelPositions = [
+                [0.98, 0.42, 1.48], [-0.98, 0.42, 1.48],
+                [0.98, 0.42, -1.48], [-0.98, 0.42, -1.48]
+            ];
+            wheelPositions.forEach(pos => {
+                const tire = new THREE.Mesh(tireGeo, darkMat);
+                tire.position.set(...pos);
+                tire.castShadow = true;
+                const rim = new THREE.Mesh(wheelRimGeo, rimMat);
+                rim.position.set(...pos);
+                group.add(tire, rim);
+            });
+
+            return group;
+        }
+
+        // --- ENTITY CLASSES ---
+        class Vehicle {
+            constructor(x, z, isPlayer = false) {
+                this.isPlayer = isPlayer;
+                this.mesh = createWaymoMesh(isPlayer);
+                scene.add(this.mesh);
+                
+                this.pos = new THREE.Vector3(x, getElevation(x, z), z);
+                this.vel = new THREE.Vector3();
+                this.speed = 0;
+                this.angle = Math.random() * Math.PI * 2;
+                
+                this.maxSpeed = isPlayer ? 55 : 40;
+                this.accel = 35;
+                this.handling = 2.5;
+                
+                this.hp = 100;
+                this.energy = 100;
+                this.lastShot = 0;
+                this.invulnTimer = isPlayer ? 4.0 : 0;
+
+                // AI specifics
+                this.aiState = 'wander';
+                this.targetAngle = this.angle;
+                this.aiTimer = 0;
+            }
+
+            update(dt) {
+                // Energy regen & spawn shield timer
+                this.energy = Math.min(100, this.energy + 28 * dt);
+                if (this.invulnTimer > 0) this.invulnTimer = Math.max(0, this.invulnTimer - dt);
+
+                if (this.isPlayer) {
+                    this.handlePlayerInput(dt);
+                } else {
+                    this.handleAI(dt);
+                }
+
+                // Physics & Movement
+                // Apply friction
+                this.speed *= Math.pow(0.4, dt);
+
+                // Calculate velocity vector
+                const forward = new THREE.Vector3(Math.sin(this.angle), 0, Math.cos(this.angle));
+                
+                // Proposed new position
+                const nextX = this.pos.x + forward.x * this.speed * dt;
+                const nextZ = this.pos.z + forward.z * this.speed * dt;
+
+                // World Bounds & Bay Collision
+                if (nextX > -OFFSET + 20 && nextX < 420 && nextZ > -OFFSET + 20 && nextZ < OFFSET - 20) {
+                    // Building Collision
+                    if (!this.checkBuildingCollision(nextX, nextZ)) {
+                        this.pos.x = nextX;
+                        this.pos.z = nextZ;
+                    } else {
+                        this.speed *= -0.5; // Bounce off building
+                        if (this.isPlayer) sound.playHit();
+                        this.aiTimer = 0; // Force AI to rethink
+                    }
+                } else {
+                    this.speed *= -0.5;
+                    this.angle += Math.PI; // Turn around at edge
+                }
+
+                // Terrain Following
+                const targetY = getElevation(this.pos.x, this.pos.z);
+                this.pos.y = targetY;
+                this.mesh.position.copy(this.pos);
+
+                // Orientation on hills
+                const normal = getTerrainNormal(this.pos.x, this.pos.z);
+                
+                // Project forward vector onto terrain plane
+                const projForward = forward.clone().projectOnPlane(normal).normalize();
+                const right = new THREE.Vector3().crossVectors(normal, projForward).normalize();
+                
+                const rotMatrix = new THREE.Matrix4();
+                rotMatrix.makeBasis(right, normal, projForward);
+                
+                // Smooth rotation
+                const targetQuat = new THREE.Quaternion().setFromRotationMatrix(rotMatrix);
+                this.mesh.quaternion.slerp(targetQuat, 15 * dt);
+
+                // Spin LiDAR
+                this.mesh.userData.turret.rotation.y += 10 * dt;
+            }
+
+            handlePlayerInput(dt) {
+                let currentMax = keys.shift && this.energy > 5 ? this.maxSpeed * 1.4 : this.maxSpeed;
+                if (keys.shift && Math.abs(this.speed) > 10) {
+                    this.energy = Math.max(0, this.energy - 30 * dt);
+                    // Boost particles
+                    if (Math.random() > 0.5) {
+                        const back = this.pos.clone().sub(new THREE.Vector3(Math.sin(this.angle)*2, -0.5, Math.cos(this.angle)*2));
+                        createParticles(back, 0x00f0ff, 1, 2);
+                    }
+                }
+
+                if (keys.w) this.speed += this.accel * dt;
+                if (keys.s) this.speed -= this.accel * dt;
+                
+                this.speed = THREE.MathUtils.clamp(this.speed, -currentMax * 0.5, currentMax);
+
+                // Steering (only when moving)
+                if (Math.abs(this.speed) > 0.5) {
+                    const dir = this.speed > 0 ? 1 : -1;
+                    const turnFactor = Math.min(1, Math.abs(this.speed) / 10);
+                    if (keys.a) this.angle += this.handling * dt * dir * turnFactor;
+                    if (keys.d) this.angle -= this.handling * dt * dir * turnFactor;
+                }
+
+                if (keys.space) this.shoot();
+
+                sound.updateEngine(this.speed / this.maxSpeed);
+            }
+
+            handleAI(dt) {
+                this.aiTimer -= dt;
+                
+                // Find nearest target (Player or other bot)
+                let nearestDist = 9999;
+                let target = null;
+
+                // Check player
+                if (player) {
+                    const d = this.pos.distanceTo(player.pos);
+                    if (d < nearestDist) { nearestDist = d; target = player; }
+                }
+                // Check other bots
+                bots.forEach(b => {
+                    if (b !== this) {
+                        const d = this.pos.distanceTo(b.pos);
+                        if (d < nearestDist) { nearestDist = d; target = b; }
+                    }
+                });
+
+                if (target && nearestDist < 135) {
+                    const dx = target.pos.x - this.pos.x;
+                    const dz = target.pos.z - this.pos.z;
+                    const directAngle = Math.atan2(dx, dz);
+
+                    // Combat spacing: strafe/orbit instead of ramming into the back of the player
+                    if (nearestDist < 22) {
+                        // Too close! Peel off sideways to avoid rear-ending
+                        const sideSign = (this.mesh.id % 2 === 0) ? 1 : -1;
+                        this.targetAngle = directAngle + sideSign * (Math.PI * 0.65);
+                    } else if (nearestDist < 42) {
+                        // Strafe at optimal laser tag distance
+                        const sideSign = (this.mesh.id % 2 === 0) ? 1 : -1;
+                        this.targetAngle = directAngle + sideSign * 0.38;
+                    } else {
+                        this.targetAngle = directAngle;
+                    }
+
+                    // Shoot if within firing arc (turret can aim slightly off-axis)
+                    const angleDiff = Math.abs(this.normalizeAngle(this.angle - directAngle));
+                    if (angleDiff < 0.65 && nearestDist < 110) {
+                        this.shoot();
+                    }
+                } else if (this.aiTimer <= 0) {
+                    // Wander along grid (mostly 90 degree turns)
+                    const dirs = [0, Math.PI/2, Math.PI, -Math.PI/2];
+                    this.targetAngle = dirs[Math.floor(Math.random() * dirs.length)] + (Math.random()*0.2 - 0.1);
+                    this.aiTimer = 2 + Math.random() * 3;
+                }
+
+                // Raycast/Lookahead for buildings
+                const lookAheadDist = 14;
+                const lookX = this.pos.x + Math.sin(this.angle) * lookAheadDist;
+                const lookZ = this.pos.z + Math.cos(this.angle) * lookAheadDist;
+                if (this.checkBuildingCollision(lookX, lookZ)) {
+                    this.targetAngle += Math.PI / 2;
+                    this.speed *= 0.8;
+                }
+
+                // Steer towards targetAngle
+                const diff = this.normalizeAngle(this.targetAngle - this.angle);
+                this.angle += Math.sign(diff) * Math.min(Math.abs(diff), this.handling * dt);
+
+                const desiredMax = (target && nearestDist < 18) ? this.maxSpeed * 0.65 : this.maxSpeed;
+                this.speed += this.accel * 0.8 * dt;
+                this.speed = Math.min(this.speed, desiredMax);
+            }
+
+            normalizeAngle(a) {
+                while (a > Math.PI) a -= Math.PI * 2;
+                while (a < -Math.PI) a += Math.PI * 2;
+                return a;
+            }
+
+            checkBuildingCollision(x, z) {
+                const carRadius = 1.8;
+                for (let b of buildings) {
+                    if (x + carRadius > b.minX && x - carRadius < b.maxX &&
+                        z + carRadius > b.minZ && z - carRadius < b.maxZ) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            shoot() {
+                const now = clock.getElapsedTime();
+                if (now - this.lastShot < 0.22 || this.energy < 12) return;
+                
+                this.lastShot = now;
+                this.energy -= 12;
+                if (this.isPlayer) totalLasersFired++;
+                sound.playLaser(this.isPlayer);
+
+                // Spawn laser from roof LiDAR dome
+                const spawnPos = this.pos.clone();
+                spawnPos.y += 2.08;
+
+                // Aim vector: along street terrain grade or toward crosshair target
+                const forward = new THREE.Vector3(Math.sin(this.angle), 0, Math.cos(this.angle));
+                const normal = getTerrainNormal(this.pos.x, this.pos.z);
+                let dir = forward.clone().projectOnPlane(normal).normalize();
+
+                if (this.isPlayer) {
+                    // Aim straight ahead along the player's sightline so the beam clearly streaks across the screen
+                    const farPoint = spawnPos.clone().addScaledVector(dir, 95);
+                    farPoint.y = getElevation(farPoint.x, farPoint.z) + 1.6;
+                    dir = farPoint.sub(spawnPos).normalize();
+                }
+
+                // Generous auto-aim assist cone towards visible targets
+                let bestTarget = null;
+                let minAngle = this.isPlayer ? 0.52 : 0.40;
+
+                const potentialTargets = this.isPlayer ? bots : [player, ...bots.filter(b => b !== this)];
+                potentialTargets.forEach(t => {
+                    if (!t) return;
+                    const toTarget = t.pos.clone().add(new THREE.Vector3(0, 1.2, 0)).sub(spawnPos);
+                    const dist = toTarget.length();
+                    if (dist < 155) {
+                        toTarget.normalize();
+                        const angle = dir.angleTo(toTarget);
+                        if (angle < minAngle) {
+                            minAngle = angle;
+                            bestTarget = t;
+                        }
+                    }
+                });
+
+                if (bestTarget) {
+                    const aimPos = bestTarget.pos.clone();
+                    aimPos.y += 1.2; // Aim at center mass
+                    const exactDir = aimPos.sub(spawnPos).normalize();
+                    dir.lerp(exactDir, this.isPlayer ? 0.92 : 0.75).normalize();
+                }
+
+                // Bright muzzle flash & thick high-visibility laser beam trace from roof LiDAR
+                const beamColor = this.isPlayer ? 0x00ffcc : 0xff0055;
+                createParticles(spawnPos, beamColor, 4, 6);
+                const traceLen = bestTarget ? Math.min(120, spawnPos.distanceTo(bestTarget.pos)) : 95;
+                createBeamTrace(spawnPos, dir, beamColor, traceLen, this.isPlayer);
+
+                lasers.push(new Laser(spawnPos, dir, this));
+            }
+
+            takeDamage(amount, attacker) {
+                if (this.invulnTimer > 0) return;
+                const finalDamage = this.isPlayer ? amount * 0.45 : amount;
+                this.hp -= finalDamage;
+                createParticles(this.pos.clone().add(new THREE.Vector3(0,1,0)), this.isPlayer ? 0x00f0ff : 0xff0055, 6, 5);
+                
+                if (this.isPlayer) {
+                    sound.playHit();
+                    const flash = document.getElementById('damage-flash');
+                    flash.style.opacity = 1;
+                    setTimeout(() => flash.style.opacity = 0, 150);
+                }
+
+                if (this.hp <= 0) {
+                    this.die(attacker);
+                }
+            }
+
+            die(attacker) {
+                sound.playExplosion();
+                createParticles(this.pos.clone().add(new THREE.Vector3(0,1,0)), 0xffaa00, 40, 15);
+                createParticles(this.pos.clone().add(new THREE.Vector3(0,1,0)), 0x00f0ff, 20, 10);
+
+                if (this.isPlayer) {
+                    addKillFeed("SYSTEM FAILURE: Your Waymo was tagged out!");
+                    this.respawn();
+                } else {
+                    if (attacker && attacker.isPlayer) {
+                        score++;
+                        document.getElementById('score-val').innerText = score;
+                        addKillFeed(`Tagged Rogue Waymo #${Math.floor(Math.random()*900+100)}!`);
+                        // Heal player slightly on kill
+                        player.hp = Math.min(100, player.hp + 25);
+                    } else {
+                        addKillFeed(`Waymo Unit tagged another Waymo Unit`);
+                    }
+                    this.respawn();
+                }
+            }
+
+            respawn() {
+                this.hp = 100;
+                this.energy = 100;
+                this.speed = 0;
+                this.invulnTimer = this.isPlayer ? 4.0 : 1.0;
+
+                if (this.isPlayer) {
+                    // Spawn player in scenic central SoMa/Financial District avenue facing East toward the Bay Bridge & bots
+                    const gx = 5;
+                    const gz = 6;
+                    this.pos.x = -OFFSET + gx * CELL_SIZE + STREET_WIDTH / 2;
+                    this.pos.z = -OFFSET + gz * CELL_SIZE + STREET_WIDTH / 2;
+                    this.angle = Math.PI / 2; // Facing East down the street
+                } else {
+                    // Spawn bots on streets around the player at a safe distance (45 to 190m away, with several ahead)
+                    let bestX = 0, bestZ = 0;
+                    for (let attempt = 0; attempt < 20; attempt++) {
+                        const gx = Math.floor(Math.random() * 7) + 3; // Central blocks 3..9
+                        const gz = Math.floor(Math.random() * 7) + 3;
+                        const offsetAlongStreet = (Math.random() - 0.5) * 40;
+                        const tx = -OFFSET + gx * CELL_SIZE + STREET_WIDTH / 2 + (attempt % 2 === 0 ? offsetAlongStreet : 0);
+                        const tz = -OFFSET + gz * CELL_SIZE + STREET_WIDTH / 2 + (attempt % 2 !== 0 ? offsetAlongStreet : 0);
+                        if (tx > 340) continue;
+                        bestX = tx;
+                        bestZ = tz;
+                        if (!player) break;
+                        const dist = Math.hypot(tx - player.pos.x, tz - player.pos.z);
+                        if (dist > 45 && dist < 210) break;
+                    }
+                    this.pos.x = bestX;
+                    this.pos.z = bestZ;
+                }
+                this.pos.y = getElevation(this.pos.x, this.pos.z);
+                this.mesh.position.copy(this.pos);
+            }
+        }
+
+        function createBeamTrace(startPos, dir, color, length = 85, isPlayer = false) {
+            const group = new THREE.Group();
+            const outerR = isPlayer ? 0.42 : 0.24;
+            const coreR = isPlayer ? 0.16 : 0.09;
+            const outerGeo = new THREE.CylinderGeometry(outerR, outerR, length, 8);
+            outerGeo.translate(0, length / 2, 0);
+            outerGeo.rotateX(Math.PI / 2);
+            const outerMat = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: isPlayer ? 0.88 : 0.65
+            });
+            const outerMesh = new THREE.Mesh(outerGeo, outerMat);
+
+            const coreGeo = new THREE.CylinderGeometry(coreR, coreR, length, 8);
+            coreGeo.translate(0, length / 2, 0);
+            coreGeo.rotateX(Math.PI / 2);
+            const coreMat = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.98
+            });
+            const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+
+            // Bright muzzle glow sphere at roof LiDAR turret
+            const flashGeo = new THREE.SphereGeometry(isPlayer ? 0.65 : 0.4, 8, 8);
+            const flashMesh = new THREE.Mesh(flashGeo, coreMat);
+
+            group.add(outerMesh, coreMesh, flashMesh);
+            group.position.copy(startPos);
+            group.lookAt(startPos.clone().add(dir));
+            scene.add(group);
+
+            const dur = isPlayer ? 0.24 : 0.16;
+            beamTraces.push({ group, outerMat, coreMat, life: dur, maxLife: dur });
+        }
+
+        function updateBeamTraces(dt) {
+            for (let i = beamTraces.length - 1; i >= 0; i--) {
+                const b = beamTraces[i];
+                b.life -= dt;
+                const ratio = Math.max(0, b.life / b.maxLife);
+                b.outerMat.opacity = ratio * 0.65;
+                b.coreMat.opacity = ratio * 0.95;
+                b.group.scale.set(ratio, ratio, 1);
+                if (b.life <= 0) {
+                    scene.remove(b.group);
+                    b.group.children.forEach(c => {
+                        c.geometry.dispose();
+                        c.material.dispose();
+                    });
+                    beamTraces.splice(i, 1);
+                }
+            }
+        }
+
+        class Laser {
+            constructor(pos, dir, owner) {
+                this.pos = pos.clone();
+                this.dir = dir.normalize();
+                this.owner = owner;
+                this.speed = 190;
+                this.life = 1.1; // seconds
+
+                this.mesh = new THREE.Group();
+                const color = owner.isPlayer ? 0x00ffcc : 0xff0055;
+
+                // Glowing outer plasma sheath
+                const outerGeo = new THREE.CylinderGeometry(0.28, 0.28, 12, 10);
+                outerGeo.rotateX(Math.PI / 2);
+                const outerMat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.85 });
+                const outer = new THREE.Mesh(outerGeo, outerMat);
+
+                // Bright white inner core
+                const coreGeo = new THREE.CylinderGeometry(0.11, 0.11, 12.4, 8);
+                coreGeo.rotateX(Math.PI / 2);
+                const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                const core = new THREE.Mesh(coreGeo, coreMat);
+
+                this.mesh.add(outer, core);
+                this.mesh.position.copy(this.pos);
+                this.mesh.lookAt(this.pos.clone().add(this.dir));
+                scene.add(this.mesh);
+            }
+
+            update(dt) {
+                this.life -= dt;
+                const steps = 3;
+                const stepDist = (this.speed * dt) / steps;
+
+                for (let s = 0; s < steps; s++) {
+                    this.pos.addScaledVector(this.dir, stepDist);
+                    this.mesh.position.copy(this.pos);
+
+                    // Check terrain collision
+                    if (this.pos.y < getElevation(this.pos.x, this.pos.z)) {
+                        createParticles(this.pos, 0xffdd00, 12, 8);
+                        return false;
+                    }
+
+                    // Check building collision
+                    for (let b of buildings) {
+                        if (this.pos.x > b.minX && this.pos.x < b.maxX &&
+                            this.pos.z > b.minZ && this.pos.z < b.maxZ &&
+                            this.pos.y < b.maxY) {
+                            createParticles(this.pos, 0xffdd00, 12, 8);
+                            return false;
+                        }
+                    }
+
+                    // Check vehicle collision
+                    const targets = this.owner.isPlayer ? bots : [player, ...bots.filter(b => b !== this.owner)];
+                    for (let t of targets) {
+                        if (!t) continue;
+                        const dx = this.pos.x - t.pos.x;
+                        const dz = this.pos.z - t.pos.z;
+                        const dy = this.pos.y - (t.pos.y + 1.1);
+                        if (dx*dx + dz*dz < 6.0 && Math.abs(dy) < 2.0) {
+                            createParticles(this.pos, 0xffffff, 18, 12);
+                            createParticles(this.pos, this.owner.isPlayer ? 0x00ffcc : 0xff0055, 18, 10);
+                            t.takeDamage(25, this.owner);
+                            return false;
+                        }
+                    }
+                }
+
+                return this.life > 0;
+            }
+
+            destroy() {
+                scene.remove(this.mesh);
+                this.mesh.children.forEach(c => {
+                    c.geometry.dispose();
+                    c.material.dispose();
+                });
+            }
+        }
+
+        // --- PARTICLE SYSTEM ---
+        function createParticles(pos, color, count, speed) {
+            const geo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+            const mat = new THREE.MeshBasicMaterial({ color: color });
+            
+            for (let i = 0; i < count; i++) {
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.copy(pos);
+                
+                const vel = new THREE.Vector3(
+                    (Math.random() - 0.5) * 2,
+                    Math.random() * 1.5,
+                    (Math.random() - 0.5) * 2
+                ).normalize().multiplyScalar(Math.random() * speed);
+
+                scene.add(mesh);
+                particles.push({ mesh, vel, life: 0.5 + Math.random() * 0.5 });
+            }
+        }
+
+        function updateParticles(dt) {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.life -= dt;
+                p.vel.y -= 25 * dt; // Gravity
+                p.mesh.position.addScaledVector(p.vel, dt);
+                p.mesh.rotation.x += 5 * dt;
+                p.mesh.rotation.y += 5 * dt;
+                p.mesh.scale.setScalar(p.life);
+
+                if (p.life <= 0) {
+                    scene.remove(p.mesh);
+                    p.mesh.geometry.dispose();
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        // --- WORLD GENERATION ---
+        function buildSanFrancisco() {
+            // 1. Terrain (Road Grid & Hills)
+            const terrainGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 160, 160);
+            terrainGeo.rotateX(-Math.PI / 2);
+            
+            const posAttr = terrainGeo.attributes.position;
+            for (let i = 0; i < posAttr.count; i++) {
+                const x = posAttr.getX(i);
+                const z = posAttr.getZ(i);
+                posAttr.setY(i, getElevation(x, z));
+            }
+            terrainGeo.computeVertexNormals();
+
+            const terrainMat = new THREE.MeshStandardMaterial({ 
+                map: createRoadTexture(),
+                roughness: 0.8,
+                metalness: 0.1
+            });
+            const terrain = new THREE.Mesh(terrainGeo, terrainMat);
+            terrain.receiveShadow = true;
+            scene.add(terrain);
+
+            // 2. San Francisco Bay (Daylight Blue Water)
+            const waterGeo = new THREE.PlaneGeometry(WORLD_SIZE * 2, WORLD_SIZE * 2);
+            waterGeo.rotateX(-Math.PI / 2);
+            const waterMat = new THREE.MeshStandardMaterial({
+                color: 0x2b6e99,
+                roughness: 0.15,
+                metalness: 0.65
+            });
+            const water = new THREE.Mesh(waterGeo, waterMat);
+            water.position.y = -2;
+            scene.add(water);
+
+            // 3. SF-Oakland Bay Bridge (Silver-white truss deck & towers as seen in reference photos)
+            buildBridge();
+
+            // 4. City Blocks & Landmarks
+            // Authentic SF daytime palette: terracotta brick, warm sandstone, cream stucco, bay-window Victorians
+            const texColors = ['#9c4738', '#e6dfd3', '#c8b8a6', '#8f5242', '#dcd6cc'];
+            const bTextures = texColors.map((c, idx) => createBuildingTexture(c, idx === 0 || idx === 3));
+            const victorianColors = [0xe8d5b7, 0xd48c70, 0x8fb8a8, 0x99b3cc, 0xf2e2c4, 0xc76d5e];
+            const trimMat = new THREE.MeshStandardMaterial({ color: 0xf4f4f0, roughness: 0.5 });
+
+            for (let gx = 0; gx < GRID_STEPS; gx++) {
+                for (let gz = 0; gz < GRID_STEPS; gz++) {
+                    const cellX = -OFFSET + gx * CELL_SIZE;
+                    const cellZ = -OFFSET + gz * CELL_SIZE;
+                    
+                    // Center of the building plot
+                    const bx = cellX + STREET_WIDTH + BLOCK_SIZE / 2;
+                    const bz = cellZ + STREET_WIDTH + BLOCK_SIZE / 2;
+
+                    // Skip if in the Bay
+                    if (bx > 380) continue;
+
+                    const groundY = getElevation(bx, bz);
+
+                    // Special Landmark: Transamerica Pyramid
+                    if (gx === 7 && gz === 6) {
+                        const pyrH = 180;
+                        const pyrGeo = new THREE.ConeGeometry(30, pyrH, 4);
+                        pyrGeo.rotateY(Math.PI / 4);
+                        const pyrMat = new THREE.MeshStandardMaterial({ 
+                            color: 0xf5f2eb, roughness: 0.35, map: bTextures[1] 
+                        });
+                        const pyr = new THREE.Mesh(pyrGeo, pyrMat);
+                        pyr.position.set(bx, groundY + pyrH/2 - 10, bz);
+                        pyr.castShadow = true;
+                        pyr.receiveShadow = true;
+                        scene.add(pyr);
+
+                        // Elevator Wings
+                        const wingGeo = new THREE.BoxGeometry(14, 65, 44);
+                        const wing = new THREE.Mesh(wingGeo, pyrMat);
+                        wing.position.set(bx, groundY + 30, bz);
+                        scene.add(wing);
+
+                        // Glass Crown Spire
+                        const spireGeo = new THREE.ConeGeometry(2.5, 22, 4);
+                        spireGeo.rotateY(Math.PI / 4);
+                        const spireMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x88ddff, emissiveIntensity: 0.8 });
+                        const spire = new THREE.Mesh(spireGeo, spireMat);
+                        spire.position.set(bx, groundY + pyrH - 5, bz);
+                        scene.add(spire);
+
+                        buildings.push({ minX: bx-25, maxX: bx+25, minZ: bz-25, maxZ: bz+25, maxY: groundY + pyrH });
+                        addStreetProps(cellX + STREET_WIDTH, cellZ + STREET_WIDTH);
+                        continue;
+                    }
+
+                    // Special Landmark: Coit Tower (on top of Telegraph Hill)
+                    if (gx === 4 && gz === 7) {
+                        const coitH = 72;
+                        const coitGeo = new THREE.CylinderGeometry(9.5, 11.5, coitH, 20);
+                        const coitMat = new THREE.MeshStandardMaterial({ color: 0xf2efe9, roughness: 0.5 });
+                        const coit = new THREE.Mesh(coitGeo, coitMat);
+                        coit.position.set(bx, groundY + coitH/2 - 5, bz);
+                        coit.castShadow = true;
+                        scene.add(coit);
+
+                        const topCap = new THREE.Mesh(new THREE.CylinderGeometry(7.5, 9.5, 8, 20), coitMat);
+                        topCap.position.set(bx, groundY + coitH - 2, bz);
+                        scene.add(topCap);
+
+                        buildings.push({ minX: bx-12, maxX: bx+12, minZ: bz-12, maxZ: bz+12, maxY: groundY + coitH });
+                        addStreetProps(cellX + STREET_WIDTH, cellZ + STREET_WIDTH);
+                        continue;
+                    }
+
+                    // SoMa Brick & Mid-Rise / Downtown Towers vs SF Victorian Rowhouses with Bay Windows
+                    const isDowntown = gx >= 6 && gz >= 4 && gz <= 8;
+
+                    if (isDowntown) {
+                        const w = BLOCK_SIZE - 16;
+                        const d = BLOCK_SIZE - 16;
+                        const h = 42 + Math.random() * 68;
+                        
+                        const bGeo = new THREE.BoxGeometry(w, h + 16, d);
+                        const tex = bTextures[Math.floor(Math.random() * bTextures.length)];
+                        const bMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.35, metalness: 0.15 });
+                        
+                        const bMesh = new THREE.Mesh(bGeo, bMat);
+                        bMesh.position.set(bx, groundY + h/2 - 8, bz);
+                        bMesh.receiveShadow = true;
+                        scene.add(bMesh);
+
+                        // Roof cornice & mechanical penthouse
+                        const cornice = new THREE.Mesh(new THREE.BoxGeometry(w + 2, 2.2, d + 2), trimMat);
+                        cornice.position.set(bx, groundY + h, bz);
+                        scene.add(cornice);
+
+                        // Red lattice construction crane on select SoMa blocks (like the reference photos!)
+                        if ((gx === 6 && gz === 5) || (gx === 8 && gz === 7)) {
+                            const craneMat = new THREE.MeshStandardMaterial({ color: 0xc82828, roughness: 0.4 });
+                            const mast = new THREE.Mesh(new THREE.BoxGeometry(2.8, h + 55, 2.8), craneMat);
+                            mast.position.set(bx + w * 0.3, groundY + (h + 55) / 2, bz - d * 0.3);
+                            scene.add(mast);
+                            const jib = new THREE.Mesh(new THREE.BoxGeometry(38, 2.2, 2.2), craneMat);
+                            jib.position.set(bx + w * 0.3 + 12, groundY + h + 52, bz - d * 0.3);
+                            scene.add(jib);
+                        }
+
+                        buildings.push({ minX: bx - w/2, maxX: bx + w/2, minZ: bz - d/2, maxZ: bz + d/2, maxY: groundY + h });
+                    } else {
+                        // SF Victorian / Edwardian Row Houses with Bay Windows & Cornices
+                        const subSize = (BLOCK_SIZE - 16) / 2;
+                        for (let sx = -0.5; sx <= 0.5; sx += 1) {
+                            for (let sz = -0.5; sz <= 0.5; sz += 1) {
+                                const hx = bx + sx * (subSize + 4);
+                                const hz = bz + sz * (subSize + 4);
+                                const hy = getElevation(hx, hz);
+                                const hh = 16 + Math.random() * 14;
+
+                                const hGeo = new THREE.BoxGeometry(subSize, hh + 14, subSize);
+                                const color = victorianColors[Math.floor(Math.random() * victorianColors.length)];
+                                const hMat = new THREE.MeshStandardMaterial({ 
+                                    color: color, 
+                                    map: bTextures[(gx + gz) % 2 === 0 ? 0 : 1],
+                                    roughness: 0.55 
+                                });
+                                const hMesh = new THREE.Mesh(hGeo, hMat);
+                                hMesh.position.set(hx, hy + hh/2 - 7, hz);
+                                hMesh.receiveShadow = true;
+                                scene.add(hMesh);
+
+                                // Flat Edwardian roof cornice + parapet (authentic SF rowhouse look)
+                                const cornice = new THREE.Mesh(new THREE.BoxGeometry(subSize + 1.5, 1.8, subSize + 1.5), trimMat);
+                                cornice.position.set(hx, hy + hh, hz);
+                                scene.add(cornice);
+
+                                // Projecting SF Bay Window stacks on street-facing sides
+                                const bayX = hx + Math.sign(sx) * (subSize / 2 + 0.9);
+                                const bayWindow = new THREE.Mesh(new THREE.BoxGeometry(2.2, hh - 3, subSize * 0.42), trimMat);
+                                bayWindow.position.set(bayX, hy + hh / 2 - 1, hz);
+                                scene.add(bayWindow);
+
+                                buildings.push({ 
+                                    minX: hx - subSize/2, maxX: hx + subSize/2, 
+                                    minZ: hz - subSize/2, maxZ: hz + subSize/2, 
+                                    maxY: hy + hh + 3 
+                                });
+                            }
+                        }
+                    }
+
+                    // Streetlights, Traffic Signals, Palm Trees & Orange Barriers on corners
+                    addStreetProps(cellX + STREET_WIDTH, cellZ + STREET_WIDTH, gx, gz);
+                }
+            }
+        }
+
+        function addStreetProps(x, z, gx = 0, gz = 0) {
+            if (x > 380) return;
+            const y = getElevation(x, z);
+            
+            // Realistic SF Metal Streetlight & Traffic Signal Mast Arm (from reference photos)
+            const poleMat = new THREE.MeshStandardMaterial({ color: 0x686e75, metalness: 0.6, roughness: 0.4 });
+            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 8.5, 8), poleMat);
+            pole.position.set(x + 2, y + 4.2, z + 2);
+            scene.add(pole);
+
+            const arm = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.14, 0.14), poleMat);
+            arm.position.set(x - 0.1, y + 8.0, z + 2);
+            scene.add(arm);
+
+            // Traffic Signal Head + Yellow Diamond Sign ("DEAD END" / Warning sign in reference photo)
+            const signalBox = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.2, 0.45), new THREE.MeshStandardMaterial({ color: 0x1e2226 }));
+            signalBox.position.set(x - 1.8, y + 7.5, z + 2);
+            scene.add(signalBox);
+
+            const isGreen = (gx + gz) % 2 === 0;
+            const bulbMat = new THREE.MeshBasicMaterial({ color: isGreen ? 0x00ff66 : 0xff3322 });
+            const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), bulbMat);
+            bulb.position.set(x - 1.8, y + (isGreen ? 7.15 : 7.85), z + 2.25);
+            scene.add(bulb);
+
+            const signMat = new THREE.MeshStandardMaterial({ color: 0xf2b705, roughness: 0.4 });
+            const sign = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.75, 0.06), signMat);
+            sign.rotation.z = Math.PI / 4;
+            sign.position.set(x + 2, y + 5.2, z + 2.22);
+            scene.add(sign);
+
+            // Realistic SF Canary Island Date Palm with arched fronds (as seen in reference photos)
+            if ((gx + gz) % 2 === 0) {
+                const px = x + BLOCK_SIZE - 4;
+                const pz = z + 2;
+                const py = getElevation(px, pz);
+                const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b5039, roughness: 0.95 });
+                const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.46, 9.5, 7), trunkMat);
+                trunk.position.set(px, py + 4.75, pz);
+                scene.add(trunk);
+
+                const frondMat = new THREE.MeshStandardMaterial({ color: 0x366832, roughness: 0.75 });
+                const frondGeo = new THREE.ConeGeometry(0.75, 4.2, 4);
+                frondGeo.translate(0, 2.0, 0);
+                for (let f = 0; f < 7; f++) {
+                    const frond = new THREE.Mesh(frondGeo, frondMat);
+                    frond.position.set(px, py + 9.2, pz);
+                    frond.rotation.y = (f / 7) * Math.PI * 2;
+                    frond.rotation.z = 1.15;
+                    frond.scale.set(0.45, 1.0, 1.0);
+                    scene.add(frond);
+                }
+            }
+
+            // Overhead SF Muni Trolley Wires & Green Construction Fence / Orange Barriers (like reference photos)
+            if (gx >= 3 && gx <= 8 && gz >= 3 && gz <= 8) {
+                const wireMat = new THREE.MeshBasicMaterial({ color: 0x2c3036 });
+                const wire = new THREE.Mesh(new THREE.BoxGeometry(STREET_WIDTH + 6, 0.05, 0.05), wireMat);
+                wire.position.set(x - STREET_WIDTH / 2, y + 8.1, z + 2);
+                scene.add(wire);
+            }
+
+            if ((gx * 3 + gz) % 4 === 0) {
+                const barrierMat = new THREE.MeshStandardMaterial({ color: 0xff5a1f, roughness: 0.5 });
+                const barrier = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.95, 0.65), barrierMat);
+                const by = getElevation(x + 6, z + 1.2);
+                barrier.position.set(x + 6, by + 0.45, z + 1.2);
+                scene.add(barrier);
+            }
+        }
+
+        function buildBridge() {
+            const bridgeGroup = new THREE.Group();
+            // SF-Oakland Bay Bridge silver/white steel truss & towers (visible across the street in reference photos)
+            const steelMat = new THREE.MeshStandardMaterial({ color: 0xd8dde4, roughness: 0.35, metalness: 0.5 });
+
+            // Suspension Towers in the Bay
+            for (let z of [-260, 0, 260]) {
+                const towerL = new THREE.Mesh(new THREE.BoxGeometry(6, 210, 8), steelMat);
+                towerL.position.set(495, 95, z - 12);
+                const towerR = new THREE.Mesh(new THREE.BoxGeometry(6, 210, 8), steelMat);
+                towerR.position.set(495, 95, z + 12);
+                bridgeGroup.add(towerL, towerR);
+
+                // X-bracing crossbeams
+                for(let y of [55, 105, 155, 195]) {
+                    const beam = new THREE.Mesh(new THREE.BoxGeometry(7, 6, 32), steelMat);
+                    beam.position.set(495, y, z);
+                    bridgeGroup.add(beam);
+                }
+            }
+
+            // Double-deck steel truss span
+            const deckGeo = new THREE.BoxGeometry(26, 9, 1200);
+            const deck = new THREE.Mesh(deckGeo, steelMat);
+            deck.position.set(495, 48, 0);
+            bridgeGroup.add(deck);
+
+            scene.add(bridgeGroup);
+        }
+
+        // --- INITIALIZATION & LOOP ---
+        function init() {
+            const container = document.getElementById('canvas-container');
+            
+            scene = new THREE.Scene();
+            // Crisp San Francisco Daytime Sky & Coastal Haze (matching reference camera photos)
+            scene.background = new THREE.Color(0xc8dff2);
+            scene.fog = new THREE.FogExp2(0xc8dff2, 0.0011);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1200);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.15;
+            container.appendChild(renderer.domElement);
+
+            // Post-Processing (Half-res Bloom for high-FPS glowing Laser Tag beams)
+            const renderScene = new RenderPass(scene, camera);
+            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth * 0.5, window.innerHeight * 0.5), 0.7, 0.35, 0.88);
+            bloomPass.threshold = 0.85;
+            bloomPass.strength = 0.8;
+            bloomPass.radius = 0.4;
+
+            composer = new EffectComposer(renderer);
+            composer.addPass(renderScene);
+            composer.addPass(bloomPass);
+
+            // Bright Daytime SF Lighting
+            const ambientLight = new THREE.HemisphereLight(0xdff0ff, 0x7a8088, 1.85);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xfff6e5, 2.6);
+            sunLight.position.set(-280, 380, -180);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 1024;
+            sunLight.shadow.mapSize.height = 1024;
+            sunLight.shadow.camera.near = 20;
+            sunLight.shadow.camera.far = 900;
+            const d = 320;
+            sunLight.shadow.camera.left = -d;
+            sunLight.shadow.camera.right = d;
+            sunLight.shadow.camera.top = d;
+            sunLight.shadow.camera.bottom = -d;
+            sunLight.shadow.bias = -0.0005;
+            scene.add(sunLight);
+
+            // Build World
+            buildSanFrancisco();
+
+            // Spawn Player
+            player = new Vehicle(-50, 50, true);
+            player.respawn();
+
+            // Spawn Autonomous Fleet (Bots)
+            const botCount = 15;
+            for (let i = 0; i < botCount; i++) {
+                const bot = new Vehicle(0, 0, false);
+                bot.respawn();
+                bots.push(bot);
+            }
+            document.getElementById('bots-val').innerText = botCount + 1;
+
+            // Event Listeners
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('keydown', e => handleKey(e, true));
+            window.addEventListener('keyup', e => handleKey(e, false));
+            window.addEventListener('mousedown', () => { if(gameActive) keys.space = true; });
+            window.addEventListener('mouseup', () => keys.space = false);
+
+            document.getElementById('start-btn').addEventListener('click', () => {
+                document.getElementById('overlay').style.display = 'none';
+                sound.init();
+                gameActive = true;
+                addKillFeed("SYSTEM ONLINE: Autonomous Laser Tag Engaged.");
+            });
+
+            // Start Loop
+            animate();
+        }
+
+        function handleKey(e, isDown) {
+            const code = e.code;
+            if (code === 'KeyW' || code === 'ArrowUp') keys.w = isDown;
+            if (code === 'KeyS' || code === 'ArrowDown') keys.s = isDown;
+            if (code === 'KeyA' || code === 'ArrowLeft') keys.a = isDown;
+            if (code === 'KeyD' || code === 'ArrowRight') keys.d = isDown;
+            if (code === 'Space') keys.space = isDown;
+            if (code === 'ShiftLeft' || code === 'ShiftRight') keys.shift = isDown;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function addKillFeed(text) {
+            const feed = document.getElementById('kill-feed');
+            const item = document.createElement('div');
+            item.className = 'feed-item';
+            item.innerText = text;
+            feed.appendChild(item);
+            setTimeout(() => {
+                if (feed.contains(item)) feed.removeChild(item);
+            }, 4000);
+        }
+
+        function updateHUD() {
+            if (!player) return;
+            document.getElementById('speed-val').innerText = Math.floor(Math.abs(player.speed) * 1.5);
+            
+            const hpPct = Math.max(0, Math.floor(player.hp));
+            document.getElementById('health-bar').style.width = hpPct + '%';
+            document.getElementById('hp-text').innerText = hpPct + '%';
+
+            const enPct = Math.max(0, Math.floor(player.energy));
+            document.getElementById('energy-bar').style.width = enPct + '%';
+            document.getElementById('en-text').innerText = enPct + '%';
+
+            // Radar Update
+            const radarDots = document.getElementById('radar-dots');
+            radarDots.innerHTML = '';
+            const radarScale = 75 / 200; // 200 units range = 75px radius
+
+            bots.forEach(b => {
+                const dx = b.pos.x - player.pos.x;
+                const dz = b.pos.z - player.pos.z;
+                const dist = Math.sqrt(dx*dx + dz*dz);
+                
+                if (dist < 200) {
+                    // Rotate relative to player heading
+                    const angle = Math.atan2(dx, dz) - player.angle;
+                    const rx = Math.sin(angle) * dist * radarScale;
+                    const ry = -Math.cos(angle) * dist * radarScale; // -Y is up on screen
+
+                    const dot = document.createElement('div');
+                    dot.style.position = 'absolute';
+                    dot.style.width = '5px';
+                    dot.style.height = '5px';
+                    dot.style.background = '#ff0055';
+                    dot.style.borderRadius = '50%';
+                    dot.style.boxShadow = '0 0 5px #ff0055';
+                    dot.style.left = (75 + rx - 2.5) + 'px';
+                    dot.style.top = (75 + ry - 2.5) + 'px';
+                    radarDots.appendChild(dot);
+                }
+            });
+        }
+
+        function updateCamera(dt) {
+            if (!player) return;
+            
+            // Chase camera calculation
+            const forward = new THREE.Vector3(Math.sin(player.angle), 0, Math.cos(player.angle));
+            const desiredPos = player.pos.clone()
+                .sub(forward.multiplyScalar(11))
+                .add(new THREE.Vector3(0, 4.5, 0));
+
+            // Prevent camera from clipping into steep SF hills behind the car
+            const terrainH = getElevation(desiredPos.x, desiredPos.z);
+            if (desiredPos.y < terrainH + 2.0) {
+                desiredPos.y = terrainH + 2.0;
+            }
+
+            camera.position.lerp(desiredPos, 10 * dt);
+
+            // Look ahead of the car
+            const lookTarget = player.pos.clone()
+                .add(new THREE.Vector3(Math.sin(player.angle) * 15, 2.0, Math.cos(player.angle) * 15));
+            
+            // Smooth lookAt
+            const currentLook = new THREE.Vector3();
+            camera.getWorldDirection(currentLook);
+            const targetDir = lookTarget.sub(camera.position).normalize();
+            currentLook.lerp(targetDir, 12 * dt);
+            camera.lookAt(camera.position.clone().add(currentLook));
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const dt = Math.min(clock.getDelta(), 0.1);
+
+            if (gameActive) {
+                player.update(dt);
+                bots.forEach(b => {
+                    b.update(dt);
+                    // Keep autonomous fleet circulating near the active play area so streets stay lively
+                    if (player && b.pos.distanceTo(player.pos) > 260) {
+                        const angle = player.angle + (Math.random() - 0.5) * 1.6;
+                        const dist = 90 + Math.random() * 80;
+                        const nx = THREE.MathUtils.clamp(player.pos.x + Math.sin(angle) * dist, -OFFSET + 50, 330);
+                        const nz = THREE.MathUtils.clamp(player.pos.z + Math.cos(angle) * dist, -OFFSET + 50, OFFSET - 50);
+                        // Snap to nearest street center
+                        const gx = Math.round((nx + OFFSET - STREET_WIDTH / 2) / CELL_SIZE);
+                        const gz = Math.round((nz + OFFSET - STREET_WIDTH / 2) / CELL_SIZE);
+                        b.pos.x = -OFFSET + gx * CELL_SIZE + STREET_WIDTH / 2;
+                        b.pos.z = -OFFSET + gz * CELL_SIZE + STREET_WIDTH / 2;
+                        b.pos.y = getElevation(b.pos.x, b.pos.z);
+                    }
+                });
+
+                // Vehicle-to-Vehicle Collisions
+                const allVehicles = [player, ...bots];
+                for (let i = 0; i < allVehicles.length; i++) {
+                    for (let j = i + 1; j < allVehicles.length; j++) {
+                        const v1 = allVehicles[i];
+                        const v2 = allVehicles[j];
+                        const dx = v2.pos.x - v1.pos.x;
+                        const dz = v2.pos.z - v1.pos.z;
+                        const distSq = dx*dx + dz*dz;
+                        const minDist = 3.2;
+                        if (distSq < minDist * minDist && distSq > 0.001) {
+                            const dist = Math.sqrt(distSq);
+                            const overlap = (minDist - dist) * 0.5;
+                            const nx = dx / dist;
+                            const nz = dz / dist;
+                            v1.pos.x -= nx * overlap;
+                            v1.pos.z -= nz * overlap;
+                            v2.pos.x += nx * overlap;
+                            v2.pos.z += nz * overlap;
+                            // Bounce speeds slightly
+                            const temp = v1.speed;
+                            v1.speed = v2.speed * 0.8;
+                            v2.speed = temp * 0.8;
+                        }
+                    }
+                }
+
+                // Update Lasers
+                for (let i = lasers.length - 1; i >= 0; i--) {
+                    if (!lasers[i].update(dt)) {
+                        lasers[i].destroy();
+                        lasers.splice(i, 1);
+                    }
+                }
+
+                updateBeamTraces(dt);
+                updateParticles(dt);
+                updateCamera(dt);
+                updateHUD();
+            } else {
+                // Cinematic menu camera orbiting Transamerica Pyramid
+                const t = clock.getElapsedTime() * 0.2;
+                camera.position.set(150 + Math.cos(t) * 180, 120, 50 + Math.sin(t) * 180);
+                camera.lookAt(150, 60, 50);
+            }
+
+            // Update telemetry for window.__waymo every frame
+            if (dt > 0.0001) {
+                lastFps = Math.round(lastFps * 0.9 + (1 / dt) * 0.1);
+            }
+            if (player) {
+                const moved = player.pos.distanceTo(lastPlayerPos);
+                if (gameActive && (keys.w || keys.s) && moved < 0.02) {
+                    stuckCounter += dt;
+                } else {
+                    stuckCounter = 0;
+                }
+                lastPlayerPos.copy(player.pos);
+
+                const frustum = new THREE.Frustum();
+                const projScreenMatrix = new THREE.Matrix4();
+                projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+                frustum.setFromProjectionMatrix(projScreenMatrix);
+                let visibleCount = 0;
+                for (let b of bots) {
+                    if (frustum.containsPoint(b.pos)) visibleCount++;
+                }
+
+                window.__waymo = {
+                    player: {
+                        x: Number(player.pos.x.toFixed(2)),
+                        y: Number(player.pos.y.toFixed(2)),
+                        z: Number(player.pos.z.toFixed(2)),
+                        speed: Number(player.speed.toFixed(2))
+                    },
+                    enemiesVisible: visibleCount,
+                    enemiesTotal: bots.length,
+                    tags: score,
+                    lasersFired: totalLasersFired,
+                    fps: lastFps,
+                    stuck: stuckCounter > 2.0
+                };
+            }
+
+            composer.render();
+        }
+
+        // Boot up
+        init();
+    </script>
+</body>
+</html>

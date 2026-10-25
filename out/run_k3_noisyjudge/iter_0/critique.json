@@ -1,0 +1,48 @@
+{
+  "scores": {
+    "waymo_look": 3,
+    "sf_realism": 2,
+    "laser_tag_fun": 2,
+    "driving_feel": 5,
+    "visual_polish": 4
+  },
+  "summary": "The game features a clean sci-fi HUD and smooth basic driving over rolling hills, but fails on realism and core laser tag visibility. Cars look like boxy retro police sedans rather than Jaguar I-PACE Waymos, the city consists of dark untextured boxes with checkerboard windows, and firing the laser produces no visible beams\u2014only a tiny dot and draining UI bar.",
+  "top_issues": [
+    {
+      "criterion": "laser_tag_fun",
+      "issue": "Laser beams are completely invisible when firing or getting hit.",
+      "evidence": "From 00:07 to 00:12 (and Screenshot 3 & 4), 'LASER CAPACITOR' drains from 100% to 11% and 'LIDAR INTEGRITY' drops from 100% to 75%, yet no laser beams, muzzle flashes, or impact sparks appear on screen.",
+      "fix_hint": "Render a bright 3D cylinder/line or glowing particle beam from the roof lidar dome toward the reticle target when firing, plus hit sparks on target cars."
+    },
+    {
+      "criterion": "sf_realism",
+      "issue": "Environment is pitch-black night with simple colored boxes instead of realistic daytime San Francisco streets.",
+      "evidence": "Screenshots 1-5 show simple rectangular prism buildings with flat grid textures and pyramid roofs in a dark void, lacking SF Victorian architecture, bay windows, trees, overhead wires, or daytime sky seen in the reference photos.",
+      "fix_hint": "Switch to bright daytime lighting with a skybox, add Victorian/Edwardian rowhouse geometry (bay windows, cornices), sidewalks, street trees, and SF landmarks like the Bay Bridge."
+    },
+    {
+      "criterion": "waymo_look",
+      "issue": "Vehicles look like boxy 3-box sedans with police sirens rather than Waymo Jaguar I-PACE SUVs.",
+      "evidence": "Screenshot 1 and 5 show cars made of two stacked rectangular boxes with neon pink/cyan glowing domes, lacking the sloped coupe SUV roofline, front fender/mirror sensor pods, and Waymo door branding.",
+      "fix_hint": "Reshape the car body into a white compact SUV hatchback/coupe silhouette, add black sensor pods on the front fenders and mirrors, and style the roof dome as a black/white spinning lidar unit."
+    },
+    {
+      "criterion": "visual_polish",
+      "issue": "Lighting is overly dark and buildings intersect awkwardly with hilly road geometry.",
+      "evidence": "In Screenshot 1 and 2, buildings on the left and right sit sunken into or floating at flat angles against the sloped road without foundations or sidewalks, and most of the scene is lost in near-black shadow.",
+      "fix_hint": "Add strong directional sunlight and ambient hemisphere lighting, and place stepped foundations or retaining walls under buildings on hills."
+    },
+    {
+      "criterion": "driving_feel",
+      "issue": "Opponent AI cars ram directly into the rear of the player without obstacle avoidance or physics reaction.",
+      "evidence": "At 00:14-00:15 (Screenshot 5), an opponent car drives straight into the back of the player car and clips/pushes against the camera without any collision feedback or evasive steering.",
+      "fix_hint": "Add car-to-car collision separation impulses and basic AI steering behavior to strafe or maintain combat distance rather than rear-ending the player."
+    }
+  ],
+  "total": 16,
+  "usage": {
+    "in": 5187,
+    "out": 850
+  },
+  "errors": 0
+}

@@ -31,6 +31,18 @@ DRIVE = [
     ([" "], 2.0, True),
 ]
 VIEWPORT = {"width": 1280, "height": 720}
+# Seeded Math.random so the same code gives the same world/bots/spawns on every render.
+SEED_RANDOM = """
+(() => {
+  let a = 0x9E3779B9;
+  Math.random = function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+})();
+"""
 CDN_CACHE = Path(__file__).resolve().parent.parent / ".cache" / "cdn"
 
 
@@ -92,6 +104,7 @@ def render(game_dir: Path) -> dict:
         )
         page = browser.new_page(viewport=VIEWPORT)
         page.set_default_timeout(15000)
+        page.add_init_script(SEED_RANDOM)
         page.route("https://cdn.jsdelivr.net/**", serve_cdn_from_cache)
         page.route("https://unpkg.com/**", serve_cdn_from_cache)
         try:

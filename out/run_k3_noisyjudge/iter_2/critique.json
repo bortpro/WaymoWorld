@@ -1,0 +1,48 @@
+{
+  "scores": {
+    "waymo_look": 5,
+    "sf_realism": 3,
+    "laser_tag_fun": 5,
+    "driving_feel": 4,
+    "visual_polish": 4
+  },
+  "summary": "A playable prototype with functional AI laser tag battles, HUD, and hills, but hindered by severe bloom/overexposure, blocky low-poly buildings that lack San Francisco detail, framerate drops (15 FPS), and sticky building collisions that trap the player car for the second half of the test drive.",
+  "top_issues": [
+    {
+      "criterion": "driving_feel",
+      "issue": "Car gets stuck against building walls with no sliding or auto-recovery",
+      "evidence": "From 00:08 to 00:19 (and Screenshots 3-5), after turning left into a building corner, the car remains wedged at ~0-3 MPH despite 'w', 'w+d', and 'w+Shift' inputs.",
+      "fix_hint": "Implement smooth wall-sliding collision response (project velocity along wall normal) and widen street corridors so turns don't immediately hit buildings."
+    },
+    {
+      "criterion": "visual_polish",
+      "issue": "Extreme bloom and overexposure wash out the road, crosswalks, and car body",
+      "evidence": "Screenshot 1 and video 00:00-00:04 show glowing white crosswalks and car body blooming so brightly that street details and car contours disappear.",
+      "fix_hint": "Significantly raise the bloom threshold so only lasers and emissive lights glow, not white paint or car surfaces, and reduce directional light intensity."
+    },
+    {
+      "criterion": "sf_realism",
+      "issue": "City looks like generic untextured procedural boxes rather than realistic San Francisco streets",
+      "evidence": "Screenshots 1-5 compared to real SF reference photos: streets are pale grey untextured planes without curbs or sidewalks, and lacks palm/street trees, overhead trolley wires, and detailed Victorian/brick facades.",
+      "fix_hint": "Add darker asphalt road textures with lane markings, raised sidewalks with curbs, street trees/palms along sidewalks, overhead wires, and richer building facade details."
+    },
+    {
+      "criterion": "waymo_look",
+      "issue": "Vehicle model is very boxy and lacks Jaguar I-PACE SUV curves and Waymo branding",
+      "evidence": "Close-up of player car in Screenshots 1-5 shows a blocky white rectangle with a glowing cyan cylinder, missing the sloped coupe roofline, wheel arches, and side/rear details.",
+      "fix_hint": "Refine the car mesh to have a sloped SUV roofline, visible dark windows, distinct wheel arches, black sensor pods on fenders, and a clearer non-blown-out lidar dome."
+    },
+    {
+      "criterion": "visual_polish",
+      "issue": "Low framerate during driving and strange dithered shadow artifacts behind the car",
+      "evidence": "Telemetry reports 15-17 FPS during movement steps; Screenshot 1 and 2 show a coarse checkerboard/grid shadow artifact trailing behind the player car.",
+      "fix_hint": "Optimize geometry/draw calls (merge static city meshes or use instancing) to hit 60 FPS, and fix shadow map bias/resolution around the player vehicle."
+    }
+  ],
+  "total": 21,
+  "usage": {
+    "in": 6031,
+    "out": 782
+  },
+  "errors": 0
+}

@@ -1,0 +1,48 @@
+{
+  "scores": {
+    "waymo_look": 5,
+    "sf_realism": 3,
+    "laser_tag_fun": 5,
+    "driving_feel": 3,
+    "visual_polish": 5
+  },
+  "summary": "A solid prototype foundation with recognizable Waymo-style cars (white SUVs with roof lidar, corner pods, and side branding) and active AI laser tag battles, but severely hindered by poor wall collision physics that trap the player car against buildings for the majority of the test run, harsh overexposed bloom on road markings, low framerate (15-23 FPS), and generic boxy city blocks lacking authentic San Francisco architecture and street details.",
+  "top_issues": [
+    {
+      "criterion": "driving_feel",
+      "issue": "Car gets completely stuck head-on against building walls and cannot slide along them or turn away when holding throttle and steering.",
+      "evidence": "From 00:07 to 00:17 (Screenshots 3, 4, 5) and telemetry steps 4-7, after turning left with w+a into a building, subsequent w+d and w+Shift inputs result in negative/near-zero speed (-2.93 to -0.19) and virtually unchanged coordinates (x ~ -25, z ~ -3.8).",
+      "fix_hint": "Implement smooth wall-sliding collision response (project velocity onto the wall tangent rather than stopping/bouncing backward) and allow steering torque or auto-reverse/slide when pressed against obstacles."
+    },
+    {
+      "criterion": "sf_realism",
+      "issue": "City environment consists of generic boxy office blocks with flat gray sidewalks and lacks iconic San Francisco features seen in the reference photos.",
+      "evidence": "Screenshots 1-5 show repetitive grid-patterned brick/blue cubes with zero curb detail, no Victorian bay windows, no overhead trolley wires, no construction/street furniture clutter, and a tiny low-poly bridge tower.",
+      "fix_hint": "Add San Francisco architectural geometry (bay windows, varied building heights, detailed Embarcadero/SoMa brick warehouses, overhead catenary wires, street signs, curbs, and realistic asphalt textures)."
+    },
+    {
+      "criterion": "visual_polish",
+      "issue": "Excessive bloom/emissive brightness causes white crosswalk stripes, sidewalk edges, and the player car roof to glow blindingly white, plus low framerate.",
+      "evidence": "Screenshot 1 and video 00:00-00:05 show crosswalk stripes glowing like neon tubes; telemetry shows FPS dropping to 15 FPS during driving and firing.",
+      "fix_hint": "Lower the bloom intensity or increase the luminance threshold in the post-processing pass so non-laser surfaces (crosswalks, car paint) do not bloom, and optimize draw calls/shadow maps to hit 60 FPS."
+    },
+    {
+      "criterion": "waymo_look",
+      "issue": "Car proportions are overly boxy/blocky rather than the sleek sloped coupe roofline of a Jaguar I-PACE, and shadows beneath the car have visible grid aliasing.",
+      "evidence": "Screenshot 2 shows the opponent car side profile as a stepped blocky sedan/SUV, and Screenshots 1-5 show a jagged checkerboard shadow artifact directly behind the player's rear bumper.",
+      "fix_hint": "Refine the car mesh with a smoother sloped fastback roofline, distinct front grille/wheel arches, and fix the shadow map bias/resolution to eliminate the checkerboard shadow artifact."
+    },
+    {
+      "criterion": "laser_tag_fun",
+      "issue": "Player lasers fire straight into the wall when stuck with no auto-aim/turret tracking toward visible nearby opponents, and the player scores 0 tags.",
+      "evidence": "Video 00:08-00:17 and telemetry show 18 lasers fired with 0 tags scored; the roof lidar spins and emits particles while pressed against a wall.",
+      "fix_hint": "Allow the roof-mounted lidar turret to automatically swivel toward the nearest enemy within a forward cone (or aim toward camera/mouse reticle unobstructed) with clear laser beam geometry and hit-confirm indicators."
+    }
+  ],
+  "total": 21,
+  "usage": {
+    "in": 5887,
+    "out": 956
+  },
+  "errors": 0
+}

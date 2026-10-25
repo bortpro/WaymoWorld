@@ -1,0 +1,48 @@
+{
+  "scores": {
+    "waymo_look": 7,
+    "sf_realism": 5,
+    "laser_tag_fun": 6,
+    "driving_feel": 5,
+    "visual_polish": 6
+  },
+  "summary": "Waymo World delivers a recognizable low-poly interpretation of autonomous robotaxis playing laser tag in a hilly San Francisco setting, complete with a clean cyberpunk HUD and background landmarks like the Transamerica Pyramid and Bay Bridge. However, the SF street realism falls well short of the reference photos due to giant untextured gray terrain retaining walls blocking intersections, simplistic lollipop trees, and flat geometric building facades. Gameplay and driving feel are also hampered by an instant spawn-kill right at the start of the drive, weak player laser visuals, and low framerate (15-26 FPS).",
+  "top_issues": [
+    {
+      "criterion": "sf_realism",
+      "issue": "Hills create massive, untextured gray concrete wedges/walls that cut across intersections and sidewalks, and buildings sit unnaturally on steep slopes with gaps or buried bases.",
+      "evidence": "Video 00:08, 00:12, and Screenshot 3 & 4 show huge blank gray vertical walls at intersections and buildings hovering/clipping into angled gray ground planes.",
+      "fix_hint": "Conform building foundations and sidewalks properly to the terrain mesh, and replace sheer gray terrain cliffs at intersections with sloped roads or textured retaining walls."
+    },
+    {
+      "criterion": "sf_realism",
+      "issue": "City architecture and streetscapes look like flat-shaded low-poly boxes rather than realistic San Francisco streets with Victorian bay windows, detailed brick/concrete facades, palm trees, and overhead wires.",
+      "evidence": "Compare Screenshot 1 and 2 (uniform grid windows, spherical green lollipop trees, flat untextured asphalt) against the real SF Waymo reference photos.",
+      "fix_hint": "Add procedural architectural details (bay windows, cornices, varied facade textures), realistic tree models (including SF palms and street trees), overhead trolley wires, and weathered road textures."
+    },
+    {
+      "criterion": "driving_feel",
+      "issue": "Player spawns directly adjacent to an enemy Waymo and gets rammed and tagged out within the first 7 seconds, causing an abrupt teleport/respawn across the map.",
+      "evidence": "Video 00:00-00:02 shows immediate collision at spawn; at 00:08 'SYSTEM FAILURE: Your Waymo was tagged out!' triggers and telemetry shows player position jumping from (-367, -177) to (215, 313).",
+      "fix_hint": "Spawn the player in a safe clear zone away from immediate enemy line-of-sight, and add a brief respawn transition or invulnerability period."
+    },
+    {
+      "criterion": "laser_tag_fun",
+      "issue": "Player's own laser fire is barely visible compared to enemy lasers, and after respawning at 00:08 no other Waymos are seen for the rest of the drive.",
+      "evidence": "In Video 00:09-00:11 and Screenshot 3, firing the roof laser only shows tiny faint cyan/yellow dots above the dome while capacitor drains, whereas enemy lasers at 00:03 are thick bright red beams. Telemetry shows enemiesVisible: 0 from step 5 onward.",
+      "fix_hint": "Render a thick, bright glowing beam from the player's roof lidar dome toward the crosshair target, and keep AI Waymos populated around respawn locations."
+    },
+    {
+      "criterion": "visual_polish",
+      "issue": "Framerate drops to 15-22 FPS during driving and firing, making motion and camera tracking feel sluggish.",
+      "evidence": "Telemetry reports fps: 18 during 'w', fps: 15 during 'w + space' and 'w + d'.",
+      "fix_hint": "Optimize building geometry via instancing or merged meshes, and reduce per-frame shadow or particle overhead."
+    }
+  ],
+  "total": 29,
+  "usage": {
+    "in": 5914,
+    "out": 939
+  },
+  "errors": 0
+}

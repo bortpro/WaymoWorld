@@ -21,6 +21,7 @@ import os
 import re
 import shutil
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from google.genai import types
@@ -228,7 +229,7 @@ def build(c, model, html: str, crit: dict, builder_refs: list[Path], notes: list
     return new_html, text, usage
 
 
-def evaluate(c, model, game_dir: Path, critic_refs) -> tuple[dict, dict]:
+def evaluate(c, model, game_dir: Path, critic_refs, samples: int = 2) -> tuple[dict, dict]:
     rendered = render(game_dir)
     if rendered["failed"]:
         crit = {"scores": {k: 0 for k in RUBRIC}, "total": 0, "failed": rendered["failed"],
@@ -236,7 +237,14 @@ def evaluate(c, model, game_dir: Path, critic_refs) -> tuple[dict, dict]:
         crit["errors"] = len(rendered["errors"])
         (game_dir / "critique.json").write_text(json.dumps(crit, indent=2))
         return rendered, crit
-    crit = critique(c, model, game_dir, rendered, critic_refs)
+    # Several independent critic samples, averaged, to damp critic noise.
+    with ThreadPoolExecutor(samples) as ex:
+        runs = list(ex.map(lambda _: critique(c, model, game_dir, rendered, critic_refs), range(samples)))
+    crit = runs[0]
+    crit["scores"] = {k: round(sum(r["scores"][k] for r in runs) / samples, 2) for k in RUBRIC}
+    crit["total"] = round(sum(crit["scores"].values()), 2)
+    crit["sample_totals"] = [r["total"] for r in runs]
+    crit["top_issues"] = [i for r in runs for i in r["top_issues"]][:8]
     crit["errors"] = len(rendered["errors"])
     (game_dir / "critique.json").write_text(json.dumps(crit, indent=2))
     return rendered, crit
@@ -250,6 +258,8 @@ def main():
     p.add_argument("--iters", type=int, default=3)
     p.add_argument("--k", type=int, default=3, help="SF reference frames for the builder")
     p.add_argument("--holdout", type=int, default=5, help="held-out SF frames for the critic")
+    p.add_argument("--samples", type=int, default=2, help="critic samples averaged per evaluation")
+    p.add_argument("--margin", type=float, default=2.0, help="min total gain to accept a candidate")
     p.add_argument("--images", type=Path, default=Path("data/images"))
     a = p.parse_args()
 
@@ -257,8 +267,8 @@ def main():
     model = os.environ.get("GEMINI_MODEL", "gemini-4-argon")
     builder_refs, critic_refs = split_refs(a.images, a.k, a.holdout)
     if a.eval_only:
-        _, crit = evaluate(c, model, a.eval_only, critic_refs)
-        print(json.dumps({k: crit[k] for k in ("scores", "total", "errors", "summary")}, indent=1))
+        _, crit = evaluate(c, model, a.eval_only, critic_refs, a.samples)
+        print(json.dumps({k: crit.get(k) for k in ("scores", "total", "sample_totals", "errors", "summary")}, indent=1))
         return
     a.run.mkdir(parents=True, exist_ok=True)
     (a.run / "refs.json").write_text(json.dumps(
@@ -268,7 +278,7 @@ def main():
     best_dir = a.run / "iter_0"
     best_dir.mkdir(exist_ok=True)
     shutil.copy(a.start / "index.html", best_dir / "index.html")
-    _, best = evaluate(c, model, best_dir, critic_refs)
+    _, best = evaluate(c, model, best_dir, critic_refs, a.samples)
     if best.get("failed"):
         raise SystemExit(f"starting game failed to render: {best['failed']}")
     history = [{"iter": 0, "accepted": True, "total": best["total"], "scores": best["scores"], "errors": best["errors"]}]
@@ -288,8 +298,8 @@ def main():
             print(f"iter {i}: rejected, no edits applied ({usage})")
             continue
 
-        _, crit = evaluate(c, model, cand_dir, critic_refs)
-        improved = crit["total"] > best["total"] and crit["errors"] <= best["errors"]
+        _, crit = evaluate(c, model, cand_dir, critic_refs, a.samples)
+        improved = crit["total"] >= best["total"] + a.margin and crit["errors"] <= best["errors"]
         entry = {"iter": i, "accepted": improved, "total": crit["total"], "scores": crit["scores"],
                  "errors": crit["errors"], "seconds": round(time.time() - t0), **usage}
         history.append(entry)
