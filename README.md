@@ -1,3 +1,55 @@
+# WaymoWorld
+
+A multiplayer browser game: players drive Waymos around a city and shoot lasers at each other.
+
+## Status
+
+- **Frontend** (`index.html`): a fairly complete **single-player** game. Multiplayer is not wired up yet.
+- **Backend** (`backend/`): scaffolding for a WebSocket server. It currently just relays every message to all other connected clients; there's no game logic yet.
+
+## Deployments (Render)
+
+| Part     | URL                                       |
+| -------- | ----------------------------------------- |
+| Frontend | https://waymoworld.onrender.com/          |
+| Backend  | https://waymoworld-server.onrender.com    |
+
+- WebSocket endpoint: `wss://waymoworld-server.onrender.com/ws`
+- Health check: `https://waymoworld-server.onrender.com/health` returns `{ ok, clients }`
+
+## Layout
+
+```
+index.html          # Whole frontend: one HTML file with an inline ES module, Three.js r160 from jsDelivr via importmap
+backend/
+  package.json      # Node >= 20, ESM, sole dependency: ws
+  src/server.js     # HTTP server (/health) + WebSocketServer on /ws, broadcast relay, 30s ping/pong heartbeat
+```
+
+## Running locally
+
+Frontend: serve the root folder with any static server, for example:
+
+```sh
+npx serve .
+```
+
+Backend:
+
+```sh
+cd backend
+npm install
+npm run dev      # node --watch; listens on $PORT or 8080
+```
+
+Local WebSocket URL: `ws://localhost:8080/ws`
+
+## Message protocol (current)
+
+- On connect, the server sends `{ "type": "welcome" }`.
+- Clients send JSON; the server rebroadcasts each message unchanged to every other client.
+- If a message isn't valid JSON, the server replies `{ "type": "error", "error": "invalid JSON" }`.
+
 **Problem Statement Two: More Dimensions**
 
 Gemini 4 Argon is also SOTA on [long video understanding](https://blog.google/innovation-and-ai/models-and-research/gemini-models/gemini-4-argon/#workingharder), and its output window lets it generate high-fidelity [3D games and procedural worlds](https://aistudio.google.com/learn/building-3d-games-and-worlds-with-gemini-4-argon) in a single pass. A single pass is only the first draft. Build a system that renders what it made, watches the result, critiques it against the goal, and fixes it in a loop.
@@ -75,3 +127,4 @@ uv run scripts/render.py out/baseline_v0
 
 Note: Waymo Open Dataset images are **not** in this repo (license forbids redistribution);
 fetch them yourself with `scripts/fetch_waymo_images.py`.
+
