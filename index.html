@@ -453,6 +453,32 @@
             body.touch .controls-grid { grid-template-columns: auto 1fr auto 1fr; gap: 6px 12px; font-size: 11px; padding: 8px 12px; margin-bottom: 10px; }
             body.touch #start-btn { padding: 10px 40px; font-size: 16px; }
         }
+        @media (orientation: landscape) {
+            /* Bars tuck in under the title and the minimap sits top-right beside the leaderboard, off the car;
+               kill feed moves to top-center to make room */
+            body.touch .hud-bottom {
+                position: absolute;
+                top: calc(50px + env(safe-area-inset-top));
+                left: 0;
+                right: 0;
+                justify-content: flex-start;
+                align-items: flex-start;
+                padding: 0 0 0 calc(16px + env(safe-area-inset-left));
+            }
+            body.touch .bar-container { margin-bottom: 6px; }
+            body.touch #minimap {
+                position: fixed;
+                top: calc(8px + env(safe-area-inset-top));
+                right: calc(188px + env(safe-area-inset-right)); /* leaderboard: 8px inset + 150px + 2*(10px pad + 1px border) + 8px gap */
+                height: 80px !important;
+            }
+            body.touch #kill-feed {
+                top: calc(50px + env(safe-area-inset-top));
+                left: 50%;
+                transform: translateX(-50%);
+                align-items: center;
+            }
+        }
         @media (orientation: portrait) {
             /* Narrow screen: drop the title and move bars + minimap up into the sky, clear of the car and thumbs */
             body.touch .title-box { display: none; }
