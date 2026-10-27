@@ -21,7 +21,7 @@ const NAME_MAX = 16;
 const EVENT_LOG_MAX = 200;
 
 // Bots: server-driven cars that everyone sees, can shoot, and that show on the leaderboard
-const BOT_NAMES = ['Bot Rosie', 'Bot Nova', 'Bot Jinx', 'Bot Pixel', 'Bot Turbo'];
+const BOT_NAMES = ['WAYMO-SF01', 'WAYMO-SF02', 'WAYMO-SF03', 'WAYMO-SF04', 'WAYMO-SF05'];
 const BOT_SPEED_MIN = 22;
 const BOT_SPEED_MAX = 30;
 const BOT_FIRE_MS = 1100;         // min time between a bot's shots
