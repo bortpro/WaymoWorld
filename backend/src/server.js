@@ -222,7 +222,7 @@ function cleanName(raw, id) {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, NAME_MAX);
-  return name || `Waymo${id}`;
+  return name || `USER-${String(id % 100).padStart(2, '0')}`;
 }
 
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
