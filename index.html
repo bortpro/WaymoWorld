@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Waymo World: SF Laser Tag</title>
+    <title>SF Laser Taxi</title>
     <style>
         body {
             margin: 0;
@@ -513,7 +513,7 @@
     <div id="ui-layer">
         <div class="hud-top">
             <div class="title-box">
-                <h1>Waymo World</h1>
+                <h1>SF Laser Taxi</h1>
                 <p>Autonomous SF Laser Tag Division</p>
             </div>
             <div class="stats-box">
@@ -563,8 +563,8 @@
 
     <div id="overlay">
         <div class="modal">
-            <h1>Waymo World</h1>
-            <p>The humans are asleep and the autonomous fleet has turned San Francisco into a city-wide laser tag arena. Every other Waymo is a real player. Tag them with your roof-mounted LiDAR cannon: 4 hits takes a car out. Most tags tops the leaderboard.</p>
+            <h1>SF Laser Taxi</h1>
+            <p>The humans are asleep and the autonomous fleet has turned San Francisco into a city-wide laser tag arena. Every other taxi is a real player. Tag them with your roof-mounted LiDAR cannon: 4 hits takes a car out. Most tags tops the leaderboard.</p>
             <input id="name-input" type="text" maxlength="16" placeholder="Choose a username" autocomplete="off" spellcheck="false">
             <div class="controls-grid">
                 <div class="desktop-only key">W / S or ↑ / ↓</div><div class="desktop-only">Throttle / Brake & Reverse</div>
@@ -712,7 +712,7 @@
         let ws = null;
         let connected = false;
         let myId = null;
-        let myName = 'WAYMO-01';
+        let myName = 'TAXI-01';
         const roster = new Map();         // id -> { id, name, kills, deaths, vehicle }
         const remoteVehicles = new Set(); // Vehicle instances driven by other players
 
@@ -1017,41 +1017,30 @@
             return tex;
         }
 
-        function createWaymoDoorLogoTexture() {
+        function createTaxiDoorLogoTexture() {
             const canvas = document.createElement('canvas');
             canvas.width = 256;
             canvas.height = 128;
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = '#f2f5f8';
             ctx.fillRect(0, 0, 256, 128);
-            // Stylized Waymo 'W' icon in teal/blue
-            ctx.strokeStyle = '#0077ff';
-            ctx.lineWidth = 10;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.beginPath();
-            ctx.moveTo(75, 34);
-            ctx.lineTo(98, 74);
-            ctx.lineTo(128, 44);
-            ctx.lineTo(158, 74);
-            ctx.lineTo(181, 34);
-            ctx.stroke();
+            // "SF" badge in teal/blue with a laser stripe underneath
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#0077ff';
+            ctx.font = 'bold 54px "Segoe UI", Arial, sans-serif';
+            ctx.fillText('SF', 128, 70);
             ctx.fillStyle = '#00d2a8';
-            ctx.beginPath();
-            ctx.arc(75, 34, 6, 0, Math.PI * 2);
-            ctx.arc(181, 34, 6, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.fillRect(70, 80, 116, 5);
 
             ctx.fillStyle = '#1b2638';
-            ctx.font = 'bold 26px "Segoe UI", Arial, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('WAYMO', 128, 108);
+            ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
+            ctx.fillText('LASER TAXI', 128, 112);
 
             const tex = new THREE.CanvasTexture(canvas);
             tex.colorSpace = THREE.SRGBColorSpace;
             return tex;
         }
-        const waymoDoorTex = createWaymoDoorLogoTexture();
+        const taxiDoorTex = createTaxiDoorLogoTexture();
 
         // --- SF ELEVATION FUNCTION (Preserved exactly for multiplayer contract) ---
         function getElevation(x, z) {
@@ -1083,7 +1072,7 @@
             return normal;
         }
 
-        // --- WAYMO CAR GENERATOR (Jaguar I-PACE Coupe-SUV + 5th-Gen Waymo Driver Hardware) ---
+        // --- TAXI CAR GENERATOR (Coupe-SUV body + roof sensor hardware) ---
         const sharedCarMats = {
             whitePaint: new THREE.MeshPhysicalMaterial({
                 color: 0xeef2f7,
@@ -1094,7 +1083,7 @@
                 reflectivity: 0.9
             }),
             doorLogo: new THREE.MeshPhysicalMaterial({
-                map: waymoDoorTex,
+                map: taxiDoorTex,
                 roughness: 0.16,
                 metalness: 0.05,
                 clearcoat: 1.0
@@ -1173,7 +1162,7 @@
         ipaceCoreGeo.center();
         ipaceCoreGeo.rotateY(-Math.PI / 2);
 
-        function createWaymoMesh(isPlayer = false) {
+        function createTaxiMesh(isPlayer = false) {
             const group = new THREE.Group();
 
             // 1. Sleek curved Jaguar I-PACE coupe-SUV body shell
@@ -1215,7 +1204,7 @@
             sill.position.set(0, 0.37, 0);
             group.add(sill);
 
-            // Waymo door branding panels
+            // Taxi door branding panels
             const doorPanelGeo = new THREE.PlaneGeometry(1.38, 0.50);
             const doorL = new THREE.Mesh(doorPanelGeo, sharedCarMats.doorLogo);
             doorL.position.set(1.02, 0.68, 0.10);
@@ -1255,7 +1244,7 @@
             grille.position.set(0, 0.64, 2.24);
             group.add(grille);
 
-            // --- WAYMO 5TH-GEN ROOF LIDAR & SENSOR SUITE ---
+            // --- ROOF LIDAR & SENSOR SUITE ---
             const fairing = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.54, 0.16, 20), sharedCarMats.whitePaint);
             fairing.scale.set(1.0, 1.0, 1.45);
             fairing.position.set(0, 1.56, -0.06);
@@ -1306,7 +1295,7 @@
                 group.add(base, pod);
             });
 
-            // Headlights & Jaguar I-PACE LED Taillight strip + Rear Waymo badge
+            // Headlights & Jaguar I-PACE LED Taillight strip + Rear taxi badge
             const hlGeo = new THREE.BoxGeometry(0.42, 0.10, 0.08);
             const hlL = new THREE.Mesh(hlGeo, sharedCarMats.headlight);
             hlL.position.set(0.72, 0.74, 2.22);
@@ -1381,7 +1370,7 @@
             constructor(x, z, isPlayer = false, name = '') {
                 this.isPlayer = isPlayer;
                 this.isRemote = !isPlayer;
-                this.mesh = createWaymoMesh(isPlayer);
+                this.mesh = createTaxiMesh(isPlayer);
                 scene.add(this.mesh);
 
                 this.pos = new THREE.Vector3(x, getElevation(x, z), z);
@@ -2905,7 +2894,7 @@
             }
 
             const nameInput = document.getElementById('name-input');
-            try { nameInput.value = localStorage.getItem('waymoworld-name') || ''; } catch {}
+            try { nameInput.value = localStorage.getItem('sflasertaxi-name') || ''; } catch {}
             if (!IS_TOUCH) nameInput.focus(); // on phones this would pop the keyboard over the modal
             nameInput.addEventListener('keydown', e => {
                 e.stopPropagation(); // typing a name shouldn't drive the car
@@ -2924,7 +2913,7 @@
             if (gameActive) return;
             const nameInput = document.getElementById('name-input');
             myName = nameInput.value.trim().slice(0, 16);
-            try { localStorage.setItem('waymoworld-name', myName); } catch {}
+            try { localStorage.setItem('sflasertaxi-name', myName); } catch {}
             nameInput.blur();
 
             document.getElementById('overlay').style.display = 'none';

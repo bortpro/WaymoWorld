@@ -1,6 +1,6 @@
-# WaymoWorld
+# SF Laser Taxi
 
-A multiplayer browser game: players drive Waymos around a city and shoot lasers at each other.
+A multiplayer browser game: players drive robotaxis around San Francisco and shoot lasers at each other.
 
 ## Status
 
@@ -80,7 +80,7 @@ Client → server:
 
 | type | fields | notes |
 |---|---|---|
-| `join` | `name` | sent on Start; name is sanitized to ≤16 chars of letters, digits, space, `_.-` (default `Waymo<id>`) |
+| `join` | `name` | sent on Start; name is sanitized to ≤16 chars of letters, digits, space, `_.-` (default `USER-<id>`, zero-padded) |
 | `state` | `x, z, a, s` | position, heading (rad), speed; 20 Hz |
 | `shoot` | `p: [x,y,z], d: [x,y,z]` | laser origin and direction; server cooldown 150 ms |
 | `hit` | `target` | id of the remote player or bot your laser hit |
