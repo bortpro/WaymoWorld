@@ -21,7 +21,7 @@ const NAME_MAX = 16;
 const EVENT_LOG_MAX = 200;
 
 // Bots: server-driven cars that everyone sees, can shoot, and that show on the leaderboard
-const BOT_NAMES = ['TAXI-SF01', 'TAXI-SF02', 'TAXI-SF03', 'TAXI-SF04', 'TAXI-SF05'];
+const BOT_NAMES = ['LASER-TAXI-1', 'LASER-TAXI-2', 'LASER-TAXI-3', 'LASER-TAXI-4', 'LASER-TAXI-5'];
 const BOT_SPEED_MIN = 22;
 const BOT_SPEED_MAX = 30;
 const BOT_FIRE_MS = 1100;         // min time between a bot's shots
