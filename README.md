@@ -1,6 +1,6 @@
-# WaymoWorld
+# SF Laser Taxi
 
-A multiplayer browser game: players drive Waymos around a city and shoot lasers at each other.
+A multiplayer browser game: players drive robotaxis around San Francisco and shoot lasers at each other.
 
 ## Status
 
@@ -16,7 +16,7 @@ A multiplayer browser game: players drive Waymos around a city and shoot lasers 
 
 - WebSocket endpoint: `wss://waymoworld-server.onrender.com/ws`
 - Health check: `https://waymoworld-server.onrender.com/health` returns `{ ok, clients, players }`
-- Debug dashboard: `https://waymoworld-server.onrender.com/debug?token=<DEBUG_TOKEN>` (see below)
+- Debug dashboard: `https://waymoworld-server.onrender.com/?token=<DEBUG_TOKEN>` (see below)
 
 ## Layout
 
@@ -24,8 +24,8 @@ A multiplayer browser game: players drive Waymos around a city and shoot lasers 
 index.html          # Whole frontend: one HTML file with an inline ES module, Three.js r160 from jsDelivr via importmap
 backend/
   package.json      # Node >= 20, ESM, sole dependency: ws
-  src/server.js     # HTTP server (/health, /debug) + WebSocketServer on /ws, player registry, 20 Hz snapshots, hit validation, 30s ping/pong heartbeat
-  src/debug.html    # Debug dashboard page served at /debug
+  src/server.js     # HTTP server (/health, / dashboard, /debug/*) + WebSocketServer on /ws, player registry, 20 Hz snapshots, hit validation, 30s ping/pong heartbeat
+  src/debug.html    # Debug dashboard page served at / (and /debug)
 ```
 
 ## Running locally
@@ -52,7 +52,7 @@ To test multiplayer locally, open the page in two browser windows.
 
 ## Debug dashboard
 
-`/debug` is a live view of all server state. It polls `/debug/state` (JSON) every 0.25 to 5 s and shows:
+The dashboard at `/` (also `/debug`) is a live view of all server state. It polls `/debug/state` (JSON) every 0.25 to 5 s and shows:
 - an overview: uptime, sockets, players, spectators, message rates, memory
 - a top-down map of players with heading, HP, and hit range
 - every player field (position, HP, live shots, spawn protection, how long since their last state update)
@@ -60,13 +60,18 @@ To test multiplayer locally, open the page in two browser windows.
 - counters, including messages by type and shots or hits rejected by reason
 - config, a log of the last 200 events (connect, join, hit, hit-rejected, kill, leave, …), and the raw JSON
 
-Access: with no `DEBUG_TOKEN` env var set, it only answers direct localhost requests (`http://localhost:8080/debug`). On Render, set `DEBUG_TOKEN` in the service's environment and open `/debug?token=<value>`. The page includes player IPs, so keep the token private.
+- a **Daily users** line chart (14 to 365 days, from `/debug/dau?days=N`): **DAU** = total `join`s that day, **uDAU** = distinct players who joined. Players are identified by a random browser ID the client keeps in localStorage (`sflasertaxi-cid`, sent as `cid` in `join`), or by IP when the client doesn't send one. Days roll over at midnight America/Los_Angeles.
+
+**Persistence:** when `DATABASE_URL` is set (it is on Render), counters, `nextId`, the event log (kept 30 days), and daily-user rows are stored in Postgres and restored on startup. Tables are created automatically (`server_stats`, `events`, `daily_users`). Without `DATABASE_URL` (local dev), everything stays in memory. If the database can't be reached at startup, the server still runs, in memory only, and the dashboard's `database` card shows `FAILED`.
+
+Access: with no `DEBUG_TOKEN` env var set, it only answers direct localhost requests (`http://localhost:8080/`). On Render, set `DEBUG_TOKEN` in the service's environment and open `/?token=<value>`. The page includes player IPs, so keep the token private.
 
 ## Multiplayer model
 
 - **Each client owns its own car's movement** and sends `state` 20×/s. The server clamps it to the world bounds and rebroadcasts everyone in `snap`.
 - **Remote cars** ease toward the latest snapshot, extrapolating with `speed` for up to 250 ms; a jump of more than 40 units snaps (respawn).
 - **Hits are detected by the shooter's client** (its own lasers vs. remote cars) and reported as `hit`. The server rejects a hit if there's no unspent shot from the last 2 s, the target is more than 320 units away, or the target is within 2 s of (re)spawning. Otherwise it applies 25 damage.
+- **5 server-driven bots** (`BOT_NAMES` in `backend/src/server.js`) are always in the game. They use the same entity shape as players (`bot: true` in `welcome`/`join`), so snapshots, the leaderboard, and hits treat them the same. Bots drive intersection to intersection along street centerlines (`x, z = -585 + 100k`, which have no collision boxes), mostly toward the nearest human. They only fire straight down their own street, since that's guaranteed line of sight. The server can't see lasers, so the **victim's client** reports a bot laser hitting it with `botHit`, which goes through the same validation as `hit`. The server keeps its own copy of `getElevation()` for bot laser origins and aim, and it must match `index.html` exactly.
 - **The server owns HP, kills, and deaths.** At 0 HP it broadcasts `kill`, resets the victim to 100 HP, and heals the killer by 25. The victim's client picks a new random spawn point.
 - **The city is generated with a seeded RNG** (`cityRandom`, seed 415), so building heights, and therefore laser collisions, match on every client. Window textures still use `Math.random` (cosmetic only).
 - Clients on the start modal are connected but not joined: they receive all broadcasts (remote cars drive around behind the modal), but aren't in the roster.
@@ -79,19 +84,20 @@ Client → server:
 
 | type | fields | notes |
 |---|---|---|
-| `join` | `name` | sent on Start; name is sanitized to ≤16 chars of letters, digits, space, `_.-` (default `Waymo<id>`) |
+| `join` | `name` | sent on Start; name is sanitized to ≤16 chars of letters, digits, space, `_.-` (default `USER-<id>`, zero-padded) |
 | `state` | `x, z, a, s` | position, heading (rad), speed; 20 Hz |
 | `shoot` | `p: [x,y,z], d: [x,y,z]` | laser origin and direction; server cooldown 150 ms |
-| `hit` | `target` | id of the remote player your laser hit |
+| `hit` | `target` | id of the remote player or bot your laser hit |
+| `botHit` | `bot` | a bot's laser hit your car (bots can't detect hits themselves) |
 
 Server → client:
 
 | type | fields | notes |
 |---|---|---|
-| `welcome` | `players: [{id,name,kills,deaths,x,z,a,s,hp}]` | on connect |
+| `welcome` | `players: [{id,name,kills,deaths,x,z,a,s,hp,bot}]` | on connect; includes bots |
 | `joined` | `id, name` | reply to your `join` (with the sanitized name) |
 | `join` / `leave` | `player` / `id` | broadcast to everyone, including the joiner |
-| `snap` | `p: [[id,x,z,a,s,hp], ...]` | 20 Hz, all joined players |
+| `snap` | `p: [[id,x,z,a,s,hp], ...]` | 20 Hz, all joined players and bots; sent whenever any socket is connected |
 | `shoot` | `id, p, d` | to everyone except the shooter |
 | `hp` | `id, hp, by?` | after damage or the kill heal |
 | `kill` | `killer, victim, killerKills, victimDeaths` | |
@@ -141,6 +147,7 @@ We have an API key for Gemini 4.
 | `backend/` | Eric | multiplayer / WebSocket server |
 | `scripts/` | Argon loop | data fetch, Argon client, generate / render / loop |
 | `out/` | Argon loop | baseline and loop iterations |
+| `managed_agent/` | Eric | Gemini managed agent that rebuilds the whole project from scratch (see its README) |
 
 Argon loop work happens on the `loop` branch and merges into `main` at the end.
 Don't delete other people's paths. Before pushing: `git pull --rebase` for unpushed local commits, but on an already-pushed branch (e.g. `loop`) use `git merge origin/main` instead of rebasing. Never force-push.
