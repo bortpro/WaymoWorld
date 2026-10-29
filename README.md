@@ -16,7 +16,7 @@ A multiplayer browser game: players drive robotaxis around San Francisco and sho
 
 - WebSocket endpoint: `wss://waymoworld-server.onrender.com/ws`
 - Health check: `https://waymoworld-server.onrender.com/health` returns `{ ok, clients, players }`
-- Debug dashboard: `https://waymoworld-server.onrender.com/debug?token=<DEBUG_TOKEN>` (see below)
+- Debug dashboard: `https://waymoworld-server.onrender.com/?token=<DEBUG_TOKEN>` (see below)
 
 ## Layout
 
@@ -24,8 +24,8 @@ A multiplayer browser game: players drive robotaxis around San Francisco and sho
 index.html          # Whole frontend: one HTML file with an inline ES module, Three.js r160 from jsDelivr via importmap
 backend/
   package.json      # Node >= 20, ESM, sole dependency: ws
-  src/server.js     # HTTP server (/health, /debug) + WebSocketServer on /ws, player registry, 20 Hz snapshots, hit validation, 30s ping/pong heartbeat
-  src/debug.html    # Debug dashboard page served at /debug
+  src/server.js     # HTTP server (/health, / dashboard, /debug/*) + WebSocketServer on /ws, player registry, 20 Hz snapshots, hit validation, 30s ping/pong heartbeat
+  src/debug.html    # Debug dashboard page served at / (and /debug)
 ```
 
 ## Running locally
@@ -52,7 +52,7 @@ To test multiplayer locally, open the page in two browser windows.
 
 ## Debug dashboard
 
-`/debug` is a live view of all server state. It polls `/debug/state` (JSON) every 0.25 to 5 s and shows:
+The dashboard at `/` (also `/debug`) is a live view of all server state. It polls `/debug/state` (JSON) every 0.25 to 5 s and shows:
 - an overview: uptime, sockets, players, spectators, message rates, memory
 - a top-down map of players with heading, HP, and hit range
 - every player field (position, HP, live shots, spawn protection, how long since their last state update)
@@ -64,7 +64,7 @@ To test multiplayer locally, open the page in two browser windows.
 
 **Persistence:** when `DATABASE_URL` is set (it is on Render), counters, `nextId`, the event log (kept 30 days), and daily-user rows are stored in Postgres and restored on startup. Tables are created automatically (`server_stats`, `events`, `daily_users`). Without `DATABASE_URL` (local dev), everything stays in memory. If the database can't be reached at startup, the server still runs, in memory only, and the dashboard's `database` card shows `FAILED`.
 
-Access: with no `DEBUG_TOKEN` env var set, it only answers direct localhost requests (`http://localhost:8080/debug`). On Render, set `DEBUG_TOKEN` in the service's environment and open `/debug?token=<value>`. The page includes player IPs, so keep the token private.
+Access: with no `DEBUG_TOKEN` env var set, it only answers direct localhost requests (`http://localhost:8080/`). On Render, set `DEBUG_TOKEN` in the service's environment and open `/?token=<value>`. The page includes player IPs, so keep the token private.
 
 ## Multiplayer model
 

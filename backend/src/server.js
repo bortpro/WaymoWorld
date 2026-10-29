@@ -162,18 +162,15 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({ ok: true, clients: wss.clients.size, players: players.size, bots: bots.length }));
     return;
   }
-  if (url.pathname === '/') {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('SF Laser Taxi server. Connect via WebSocket at /ws\n');
-    return;
-  }
-  if (url.pathname === '/debug' || url.pathname === '/debug/state' || url.pathname === '/debug/dau') {
+  // The dashboard is served at / (and /debug, for old links)
+  const isDashboard = url.pathname === '/' || url.pathname === '/debug';
+  if (isDashboard || url.pathname === '/debug/state' || url.pathname === '/debug/dau') {
     if (!debugAllowed(req, url)) {
       res.writeHead(403, { 'Content-Type': 'text/plain' });
-      res.end(DEBUG_TOKEN ? 'Forbidden: bad or missing ?token=\n' : 'Forbidden: set DEBUG_TOKEN to enable /debug remotely\n');
+      res.end(DEBUG_TOKEN ? 'Forbidden: bad or missing ?token=\n' : 'Forbidden: set DEBUG_TOKEN to enable the dashboard remotely\n');
       return;
     }
-    if (url.pathname === '/debug') {
+    if (isDashboard) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(debugPage);
     } else if (url.pathname === '/debug/dau') {
@@ -599,7 +596,7 @@ wss.on('close', () => {
 startPersistence(() => ({ stats, nextId }));
 
 server.listen(PORT, () => {
-  console.log(`listening on http://localhost:${PORT} (ws at /ws, dashboard at /debug)`);
+  console.log(`listening on http://localhost:${PORT} (ws at /ws, dashboard at /)`);
 });
 
 function shutdown() {
