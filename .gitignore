@@ -5,3 +5,6 @@ data/
 .DS_Store
 __pycache__/
 .cache/
+
+# Babylon experiment assets: fetched at deploy time by babyexpt/fetch_assets.py (CC0, ~47 MB)
+babyexpt/assets/
