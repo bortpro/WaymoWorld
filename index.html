@@ -678,12 +678,21 @@
         const CELL_SIZE = BLOCK_SIZE + STREET_WIDTH; // 100
         const OFFSET = (GRID_STEPS * CELL_SIZE) / 2; // 600
 
+        // Golden Gate Park: a strip of grid cells on the west side (gx 0-3) in row gz 4.
+        // Streets through it stay drivable; only the blocks become parkland.
+        const GG_PARK_GZ = 4;
+        const GG_PARK_GX_MAX = 3;
+        function isGoldenGatePark(gx, gz) {
+            return gz === GG_PARK_GZ && gx >= 0 && gx <= GG_PARK_GX_MAX;
+        }
+
         let scene, camera, renderer, composer, sunLight;
         let player;
         let lasers = [];
         let particles = [];
         let buildings = []; // Bounding boxes for collision (shared across all clients via mulberry32(415))
         let cableCars = [];
+        let windmillBlades = null;
         let gameActive = false;
         let clock = new THREE.Clock();
 
@@ -1850,6 +1859,7 @@
             const treeTransforms = [];
             const signalTransforms = [];
             const wireGeos = [];
+            const parkBlocks = [];
 
             for (let gx = 0; gx < GRID_STEPS; gx++) {
                 for (let gz = 0; gz < GRID_STEPS; gz++) {
@@ -1922,7 +1932,11 @@
 
                     const isDowntown = gx >= 6 && gz >= 4 && gz <= 8;
 
-                    if (isDowntown) {
+                    if (isGoldenGatePark(gx, gz)) {
+                        // Consume the 8 cityRandom() calls the row houses here would have used, so every other block is unchanged
+                        for (let k = 0; k < 8; k++) cityRandom();
+                        parkBlocks.push({ gx, bx, bz });
+                    } else if (isDowntown) {
                         // Consume exact 2 cityRandom() calls as original
                         const rH = cityRandom();
                         const rTex = cityRandom();
@@ -2110,6 +2124,7 @@
                 scene.add(wireLines);
             }
 
+            buildGoldenGatePark(parkBlocks, treeTransforms);
             buildInstancedStreetProps(lampTransforms, palmTransforms, treeTransforms, signalTransforms);
             buildConstructionDetail();
             buildCableCars();
@@ -2224,6 +2239,267 @@
                 canopyInst.setMatrixAt(i, dummy.matrix);
             });
             scene.add(sTrunkInst, canopyInst);
+        }
+
+        // --- GOLDEN GATE PARK (west-side green strip: Dutch Windmill, Stow Lake, de Young, Conservatory of Flowers) ---
+        // Lays a horizontal geometry (already in world x/z) over the hills so it never floats or sinks
+        function drapeOnTerrain(geo, lift) {
+            const pos = geo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                pos.setY(i, getElevation(pos.getX(i), pos.getZ(i)) + lift);
+            }
+            geo.computeVertexNormals();
+            return geo;
+        }
+
+        function createGrassTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#5a8c3e';
+            ctx.fillRect(0, 0, 256, 256);
+            const grassRandom = mulberry32(77);
+            for (let i = 0; i < 2600; i++) {
+                const g = 110 + Math.floor(grassRandom() * 60);
+                ctx.fillStyle = `rgba(${g - 50}, ${g}, ${g - 70}, 0.55)`;
+                ctx.fillRect(grassRandom() * 256, grassRandom() * 256, 2, 2 + grassRandom() * 3);
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(6, 6);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            return tex;
+        }
+
+        function buildGoldenGatePark(parkBlocks, treeTransforms) {
+            const parkRandom = mulberry32(1870);
+            const grassHalf = BLOCK_SIZE / 2 - 3; // leave the sidewalk ring visible
+            const exclusions = []; // { x, z, r } circles kept clear of trees
+            const pineTransforms = [];
+
+            // 1. Lawns draped over the terrain for every park block
+            const grassGeos = [];
+            parkBlocks.forEach(({ bx, bz }) => {
+                const g = new THREE.PlaneGeometry(grassHalf * 2, grassHalf * 2, 16, 16);
+                g.rotateX(-Math.PI / 2);
+                g.translate(bx, 0, bz);
+                grassGeos.push(drapeOnTerrain(g, 0.3));
+            });
+            const grassMat = new THREE.MeshStandardMaterial({
+                map: createGrassTexture(),
+                roughness: 0.95,
+                metalness: 0.0,
+                polygonOffset: true,
+                polygonOffsetFactor: -2,
+                polygonOffsetUnits: -2
+            });
+            const lawn = new THREE.Mesh(BufferGeometryUtils.mergeGeometries(grassGeos), grassMat);
+            lawn.receiveShadow = true;
+            scene.add(lawn);
+
+            const flowerMats = [0xe8384f, 0xf5c518, 0xf08fc0, 0xffffff].map(c =>
+                new THREE.MeshStandardMaterial({ color: c, roughness: 0.8 }));
+            function addFlowerBed(x, z, w, d, matIdx) {
+                const bed = new THREE.PlaneGeometry(w, d, 4, 4);
+                bed.rotateX(-Math.PI / 2);
+                bed.translate(x, 0, z);
+                const mesh = new THREE.Mesh(drapeOnTerrain(bed, 0.45), flowerMats[matIdx % flowerMats.length]);
+                mesh.receiveShadow = true;
+                scene.add(mesh);
+            }
+
+            parkBlocks.forEach(({ gx, bx, bz }) => {
+                const gy = getElevation(bx, bz);
+
+                if (gx === 0) {
+                    // Dutch Windmill at the Ocean Beach end, sails facing the Pacific (west)
+                    const wx = bx - 12, wz = bz;
+                    const wy = getElevation(wx, wz);
+                    const mill = new THREE.Group();
+                    const towerMat = new THREE.MeshStandardMaterial({ color: 0xe6dfcf, roughness: 0.6 });
+                    const woodMat = new THREE.MeshStandardMaterial({ color: 0x5a4434, roughness: 0.7 });
+                    const tower = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 6.2, 22, 8), towerMat);
+                    tower.position.y = 9;
+                    tower.castShadow = true;
+                    const gallery = new THREE.Mesh(new THREE.CylinderGeometry(6.0, 6.0, 0.6, 8), woodMat);
+                    gallery.position.y = 6;
+                    const cap = new THREE.Mesh(new THREE.ConeGeometry(4.4, 6, 8), woodMat);
+                    cap.position.y = 23;
+                    cap.castShadow = true;
+                    mill.add(tower, gallery, cap);
+
+                    windmillBlades = new THREE.Group();
+                    windmillBlades.position.set(-4.6, 19.5, 0);
+                    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.4, 8), woodMat);
+                    hub.rotation.z = Math.PI / 2;
+                    windmillBlades.add(hub);
+                    for (let k = 0; k < 4; k++) {
+                        const arm = new THREE.Group();
+                        arm.rotation.x = k * Math.PI / 2;
+                        const spar = new THREE.Mesh(new THREE.BoxGeometry(0.35, 14, 0.5), woodMat);
+                        spar.position.y = 7;
+                        const sail = new THREE.Mesh(new THREE.BoxGeometry(0.2, 10, 2.6), towerMat);
+                        sail.position.set(0, 8.5, 1.5);
+                        sail.castShadow = true;
+                        arm.add(spar, sail);
+                        windmillBlades.add(arm);
+                    }
+                    mill.add(windmillBlades);
+                    mill.position.set(wx, wy, wz);
+                    scene.add(mill);
+
+                    // Queen Wilhelmina Tulip Garden
+                    addFlowerBed(wx + 12, wz - 9, 10, 5, 0);
+                    addFlowerBed(wx + 12, wz + 9, 10, 5, 1);
+                    addFlowerBed(wx + 24, wz - 9, 10, 5, 2);
+                    addFlowerBed(wx + 24, wz + 9, 10, 5, 3);
+
+                    buildings.push({ minX: wx - 6.5, maxX: wx + 6.5, minZ: wz - 6.5, maxZ: wz + 6.5, maxY: wy + 26 });
+                    exclusions.push({ x: wx, z: wz, r: 13 }, { x: wx + 18, z: wz, r: 13 });
+                } else if (gx === 1) {
+                    // Stow Lake with Strawberry Hill island
+                    const lakeGeo = new THREE.RingGeometry(0, 1, 48, 6);
+                    lakeGeo.rotateX(-Math.PI / 2);
+                    lakeGeo.scale(23, 1, 17);
+                    lakeGeo.translate(bx, 0, bz);
+                    const lakeMat = new THREE.MeshPhysicalMaterial({
+                        color: 0x2c6a80,
+                        roughness: 0.12,
+                        metalness: 0.4,
+                        clearcoat: 0.9,
+                        polygonOffset: true,
+                        polygonOffsetFactor: -4,
+                        polygonOffsetUnits: -4
+                    });
+                    const lake = new THREE.Mesh(drapeOnTerrain(lakeGeo, 0.5), lakeMat);
+                    lake.receiveShadow = true;
+                    scene.add(lake);
+
+                    const island = new THREE.Mesh(
+                        new THREE.ConeGeometry(7, 9, 14),
+                        new THREE.MeshStandardMaterial({ color: 0x4f7d38, roughness: 0.9 })
+                    );
+                    island.position.set(bx, gy + 2.5, bz);
+                    island.castShadow = true;
+                    island.receiveShadow = true;
+                    scene.add(island);
+                    pineTransforms.push({ x: bx, y: gy + 6, z: bz, s: 1.1 });
+
+                    buildings.push({ minX: bx - 5, maxX: bx + 5, minZ: bz - 5, maxZ: bz + 5, maxY: gy + 8 });
+                    exclusions.push({ x: bx, z: bz, r: 25 });
+                } else if (gx === 2) {
+                    // de Young Museum: low copper hall plus its twisting observation tower
+                    const copperMat = new THREE.MeshStandardMaterial({ color: 0x8f6e4e, roughness: 0.55, metalness: 0.5 });
+                    const hx = bx + 6, hz = bz + 10;
+                    const hy = getElevation(hx, hz);
+                    const hall = new THREE.Mesh(new THREE.BoxGeometry(36, 18, 16), copperMat);
+                    hall.position.set(hx, hy, hz); // half buried so it sits flush on sloped ground
+                    hall.castShadow = true;
+                    hall.receiveShadow = true;
+                    scene.add(hall);
+                    buildings.push({ minX: hx - 18, maxX: hx + 18, minZ: hz - 8, maxZ: hz + 8, maxY: hy + 9 });
+
+                    const tx = bx - 14, tz = bz - 8;
+                    const ty = getElevation(tx, tz);
+                    const towerH = 44;
+                    const towerGeo = new THREE.BoxGeometry(11, towerH, 11, 1, 12, 1);
+                    const tPos = towerGeo.attributes.position;
+                    for (let i = 0; i < tPos.count; i++) {
+                        const twist = ((tPos.getY(i) + towerH / 2) / towerH) * 0.55;
+                        const vx = tPos.getX(i), vz = tPos.getZ(i);
+                        tPos.setX(i, vx * Math.cos(twist) - vz * Math.sin(twist));
+                        tPos.setZ(i, vx * Math.sin(twist) + vz * Math.cos(twist));
+                    }
+                    towerGeo.computeVertexNormals();
+                    const tower = new THREE.Mesh(towerGeo, copperMat);
+                    tower.position.set(tx, ty + towerH / 2 - 4, tz);
+                    tower.castShadow = true;
+                    tower.receiveShadow = true;
+                    scene.add(tower);
+                    buildings.push({ minX: tx - 7, maxX: tx + 7, minZ: tz - 7, maxZ: tz + 7, maxY: ty + towerH - 4 });
+
+                    exclusions.push({ x: hx, z: hz, r: 21 }, { x: tx, z: tz, r: 10 });
+                } else if (gx === 3) {
+                    // Conservatory of Flowers: white glasshouse with central dome and vaulted wings
+                    const cx = bx, cz = bz + 8;
+                    const cy = getElevation(cx, cz);
+                    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf3f1ea, roughness: 0.35 });
+                    const glassMat = new THREE.MeshPhysicalMaterial({
+                        color: 0xdff0ec, roughness: 0.12, metalness: 0.2, clearcoat: 1.0
+                    });
+                    const cons = new THREE.Group();
+                    const drum = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 10, 16), whiteMat);
+                    drum.position.y = 3;
+                    const dome = new THREE.Mesh(new THREE.SphereGeometry(6.4, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), glassMat);
+                    dome.position.y = 8;
+                    const cupola = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.8, 2.6, 8), whiteMat);
+                    cupola.position.y = 15.2;
+                    cons.add(drum, dome, cupola);
+                    for (const side of [-1, 1]) {
+                        const wing = new THREE.Mesh(new THREE.BoxGeometry(14, 8, 7), whiteMat);
+                        wing.position.set(side * 12, 1, 0);
+                        const vaultGeo = new THREE.CylinderGeometry(3.5, 3.5, 14, 14, 1, false, 0, Math.PI);
+                        vaultGeo.rotateZ(Math.PI / 2);
+                        const vault = new THREE.Mesh(vaultGeo, glassMat);
+                        vault.position.set(side * 12, 5, 0);
+                        const pavilion = new THREE.Mesh(new THREE.BoxGeometry(4.5, 11, 9), whiteMat);
+                        pavilion.position.set(side * 21, 2.5, 0);
+                        cons.add(wing, vault, pavilion);
+                    }
+                    cons.children.forEach(m => { m.castShadow = true; m.receiveShadow = true; });
+                    cons.position.set(cx, cy, cz);
+                    scene.add(cons);
+
+                    addFlowerBed(cx - 8, cz - 13, 9, 5, 0);
+                    addFlowerBed(cx + 8, cz - 13, 9, 5, 2);
+                    addFlowerBed(cx, cz - 13, 5, 5, 1);
+
+                    buildings.push({ minX: cx - 23.5, maxX: cx + 23.5, minZ: cz - 4.5, maxZ: cz + 4.5, maxY: cy + 16 });
+                    exclusions.push({ x: cx, z: cz - 4, r: 26 });
+                }
+            });
+
+            // 2. Scatter trees: broadleaf (shared sidewalk-tree instances) mixed with Monterey pines & cypress
+            parkBlocks.forEach(({ bx, bz }) => {
+                const target = 18;
+                const placed = [];
+                for (let attempt = 0; attempt < 220 && placed.length < target; attempt++) {
+                    const x = bx + (parkRandom() * 2 - 1) * (grassHalf - 3);
+                    const z = bz + (parkRandom() * 2 - 1) * (grassHalf - 3);
+                    const s = 1.2 + parkRandom() * 0.9;
+                    const isPine = parkRandom() < 0.45;
+                    if (exclusions.some(e => (x - e.x) ** 2 + (z - e.z) ** 2 < e.r * e.r)) continue;
+                    if (placed.some(p => (x - p.x) ** 2 + (z - p.z) ** 2 < 36)) continue;
+                    placed.push({ x, z });
+                    const t = { x, y: getElevation(x, z), z, s };
+                    (isPine ? pineTransforms : treeTransforms).push(t);
+                }
+            });
+
+            const dummy = new THREE.Object3D();
+            const pineTrunkGeo = new THREE.CylinderGeometry(0.25, 0.4, 4, 7);
+            pineTrunkGeo.translate(0, 2, 0);
+            const pineCrownLow = new THREE.ConeGeometry(2.8, 5.5, 9);
+            pineCrownLow.translate(0, 5.5, 0);
+            const pineCrownHigh = new THREE.ConeGeometry(2.0, 4.5, 9);
+            pineCrownHigh.translate(0, 8.4, 0);
+            const pineCrownGeo = BufferGeometryUtils.mergeGeometries([pineCrownLow, pineCrownHigh]);
+            const pineTrunks = new THREE.InstancedMesh(pineTrunkGeo,
+                new THREE.MeshStandardMaterial({ color: 0x4a3626, roughness: 0.9 }), pineTransforms.length);
+            const pineCrowns = new THREE.InstancedMesh(pineCrownGeo,
+                new THREE.MeshStandardMaterial({ color: 0x2b4f2c, roughness: 0.85 }), pineTransforms.length);
+            pineTransforms.forEach((t, i) => {
+                dummy.position.set(t.x, t.y, t.z);
+                dummy.rotation.set(0, i * 1.3, 0);
+                dummy.scale.setScalar(t.s);
+                dummy.updateMatrix();
+                pineTrunks.setMatrixAt(i, dummy.matrix);
+                pineCrowns.setMatrixAt(i, dummy.matrix);
+            });
+            pineCrowns.castShadow = true;
+            scene.add(pineTrunks, pineCrowns);
         }
 
         function buildConstructionDetail() {
@@ -3082,6 +3358,13 @@
             // Bay
             ctx.fillStyle = 'rgba(0, 70, 120, 0.8)';
             ctx.fillRect(mapX(SHORE_X), 0, MINIMAP_W - mapX(SHORE_X), MINIMAP_H);
+            // Golden Gate Park
+            ctx.fillStyle = 'rgba(60, 110, 160, 0.35)';
+            for (let gx = 0; gx <= GG_PARK_GX_MAX; gx++) {
+                const x0 = -OFFSET + gx * CELL_SIZE + STREET_WIDTH;
+                const z0 = -OFFSET + GG_PARK_GZ * CELL_SIZE + STREET_WIDTH;
+                ctx.fillRect(mapX(x0), mapZ(z0), mapX(x0 + BLOCK_SIZE) - mapX(x0), mapZ(z0 + BLOCK_SIZE) - mapZ(z0));
+            }
             // Buildings
             ctx.fillStyle = 'rgba(130, 150, 190, 0.45)';
             for (const b of buildings) {
@@ -3237,6 +3520,7 @@
             // Other players are simulated even on the start modal, so the menu shows live traffic
             remoteVehicles.forEach(v => v.update(dt));
             updateCableCars(dt);
+            if (windmillBlades) windmillBlades.rotation.x += dt * 0.6;
 
             if (gameActive) {
                 player.update(dt);
