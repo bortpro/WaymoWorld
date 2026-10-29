@@ -60,6 +60,10 @@ To test multiplayer locally, open the page in two browser windows.
 - counters, including messages by type and shots or hits rejected by reason
 - config, a log of the last 200 events (connect, join, hit, hit-rejected, kill, leave, …), and the raw JSON
 
+- a **Daily users** line chart (14 to 365 days, from `/debug/dau?days=N`): **DAU** = total `join`s that day, **uDAU** = distinct players who joined. Players are identified by a random browser ID the client keeps in localStorage (`sflasertaxi-cid`, sent as `cid` in `join`), or by IP when the client doesn't send one. Days roll over at midnight America/Los_Angeles.
+
+**Persistence:** when `DATABASE_URL` is set (it is on Render), counters, `nextId`, the event log (kept 30 days), and daily-user rows are stored in Postgres and restored on startup. Tables are created automatically (`server_stats`, `events`, `daily_users`). Without `DATABASE_URL` (local dev), everything stays in memory. If the database can't be reached at startup, the server still runs, in memory only, and the dashboard's `database` card shows `FAILED`.
+
 Access: with no `DEBUG_TOKEN` env var set, it only answers direct localhost requests (`http://localhost:8080/debug`). On Render, set `DEBUG_TOKEN` in the service's environment and open `/debug?token=<value>`. The page includes player IPs, so keep the token private.
 
 ## Multiplayer model

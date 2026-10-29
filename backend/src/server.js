@@ -2,6 +2,7 @@ import http from 'node:http';
 import { readFileSync } from 'node:fs';
 import { timingSafeEqual } from 'node:crypto';
 import { WebSocketServer } from 'ws';
+import { initDb, startPersistence, queueEvent, recordJoin, dailyUsers, dbStatus, closeDb, METRICS_TZ } from './db.js';
 
 const PORT = Number(process.env.PORT) || 8080;
 // Required to view /debug from anywhere but localhost (set it on Render).
@@ -19,6 +20,8 @@ const SPAWN_PROTECTION_MS = 2000;
 const WORLD_LIMIT = 700;
 const NAME_MAX = 16;
 const EVENT_LOG_MAX = 200;
+const CLIENT_ID_RE = /^[A-Za-z0-9-]{8,64}$/; // browser ID the client sends in `join`, for daily-user metrics
+const DAU_DAYS_MAX = 365;
 
 // Bots: server-driven cars that everyone sees, can shoot, and that show on the leaderboard
 const BOT_NAMES = ['LASER-TAXI-1', 'LASER-TAXI-2', 'LASER-TAXI-3', 'LASER-TAXI-4', 'LASER-TAXI-5'];
@@ -61,6 +64,9 @@ const CONFIG = {
   BOT_COUNT: BOT_NAMES.length, BOT_FIRE_MS, BOT_FIRE_RANGE, BOT_CHASE_RANGE, BOT_AIM_SPREAD,
 };
 
+// Counters, the event log, and nextId survive restarts when DATABASE_URL is set.
+const restored = await initDb(process.env.DATABASE_URL, EVENT_LOG_MAX);
+
 // --- Debug instrumentation ---
 const startedAt = Date.now();
 const stats = {
@@ -81,10 +87,13 @@ const stats = {
   kills: 0,
   heartbeatTerminations: 0,
 };
-const events = []; // ring buffer of recent notable events
+Object.assign(stats, restored.stats);
+const events = restored.events; // ring buffer of recent notable events
 
 function logEvent(kind, data = {}) {
-  events.push({ t: Date.now(), kind, ...data });
+  const event = { t: Date.now(), kind, ...data };
+  events.push(event);
+  queueEvent(event);
   if (events.length > EVENT_LOG_MAX) events.shift();
 }
 
@@ -122,6 +131,7 @@ function debugState() {
       bots: bots.length,
     },
     config: CONFIG,
+    persistence: dbStatus(),
     stats,
     connections: [...wss.clients].map((ws) => ({
       ip: ws.meta.ip,
@@ -157,7 +167,7 @@ const server = http.createServer((req, res) => {
     res.end('SF Laser Taxi server. Connect via WebSocket at /ws\n');
     return;
   }
-  if (url.pathname === '/debug' || url.pathname === '/debug/state') {
+  if (url.pathname === '/debug' || url.pathname === '/debug/state' || url.pathname === '/debug/dau') {
     if (!debugAllowed(req, url)) {
       res.writeHead(403, { 'Content-Type': 'text/plain' });
       res.end(DEBUG_TOKEN ? 'Forbidden: bad or missing ?token=\n' : 'Forbidden: set DEBUG_TOKEN to enable /debug remotely\n');
@@ -166,6 +176,18 @@ const server = http.createServer((req, res) => {
     if (url.pathname === '/debug') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(debugPage);
+    } else if (url.pathname === '/debug/dau') {
+      const days = clamp(Math.floor(Number(url.searchParams.get('days')) || 30), 1, DAU_DAYS_MAX);
+      dailyUsers(days).then(
+        (rows) => {
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+          res.end(JSON.stringify({ tz: METRICS_TZ, days: rows }));
+        },
+        (err) => {
+          res.writeHead(500, { 'Content-Type': 'text/plain' });
+          res.end(`dau query failed: ${err.message}\n`);
+        },
+      );
     } else {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify(debugState()));
@@ -184,7 +206,7 @@ const players = new Map();
 // Server-driven bots. They share the player shape (plus `bot: true` and nav state)
 // so snapshots, hits, kills, and the leaderboard treat them like anyone else.
 const bots = [];
-let nextId = 1;
+let nextId = restored.nextId ?? 1;
 
 function allEntities() {
   return [...players.values(), ...bots];
@@ -298,6 +320,8 @@ const handlers = {
     const p = newEntity('');
     p.name = cleanName(msg.name, p.id);
     players.set(ws, p);
+    // DAU counts joins; uDAU counts distinct browsers (or IPs for clients that don't send an ID).
+    recordJoin(typeof msg.cid === 'string' && CLIENT_ID_RE.test(msg.cid) ? msg.cid : `ip:${ws.meta.ip}`);
     console.log(`join #${p.id} "${p.name}", players: ${players.size}`);
     logEvent('join', { id: p.id, name: p.name });
     send(ws, { type: 'joined', id: p.id, name: p.name });
@@ -572,6 +596,8 @@ wss.on('close', () => {
   clearInterval(tick);
 });
 
+startPersistence(() => ({ stats, nextId }));
+
 server.listen(PORT, () => {
   console.log(`listening on http://localhost:${PORT} (ws at /ws, dashboard at /debug)`);
 });
@@ -579,7 +605,9 @@ server.listen(PORT, () => {
 function shutdown() {
   console.log('shutting down');
   wss.close();
-  server.close(() => process.exit(0));
+  // Save the last few seconds of events and counters before exiting.
+  const flushed = closeDb().catch((err) => console.error('final db flush failed:', err.message));
+  server.close(() => flushed.then(() => process.exit(0)));
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);

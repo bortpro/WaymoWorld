@@ -722,6 +722,17 @@
         let connected = false;
         let myId = null;
         let myName = 'TAXI-01';
+        // Anonymous per-browser ID so the server can count unique daily players
+        const CLIENT_ID = (() => {
+            try {
+                let id = localStorage.getItem('sflasertaxi-cid');
+                if (!id) {
+                    id = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
+                    localStorage.setItem('sflasertaxi-cid', id);
+                }
+                return id;
+            } catch { return null; }
+        })();
         const roster = new Map();         // id -> { id, name, kills, deaths, vehicle }
         const remoteVehicles = new Set(); // Vehicle instances driven by other players
 
@@ -2884,7 +2895,7 @@
             ws.onopen = () => {
                 connected = true;
                 setConnStatus('Connected', '#00ff88');
-                if (gameActive) ws.send(JSON.stringify({ type: 'join', name: myName }));
+                if (gameActive) ws.send(JSON.stringify({ type: 'join', name: myName, cid: CLIENT_ID }));
             };
 
             ws.onmessage = (e) => {
@@ -3270,7 +3281,7 @@
             document.body.classList.add('playing');
             addKillFeed("SYSTEM ONLINE: Autonomous Laser Tag Engaged.");
             if (connected && ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'join', name: myName }));
+                ws.send(JSON.stringify({ type: 'join', name: myName, cid: CLIENT_ID }));
             }
         }
 
