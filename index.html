@@ -1790,6 +1790,7 @@
             const terrain = new THREE.Mesh(terrainGeo, terrainMat);
             terrain.receiveShadow = true;
             scene.add(terrain);
+            buildOceanBeach();
 
             // 2. San Francisco Bay Water (Reflective PBR surface around North & East city perimeter)
             const waterGeo = new THREE.PlaneGeometry(WORLD_SIZE * 3.0, WORLD_SIZE * 3.0);
@@ -2241,6 +2242,75 @@
             scene.add(sTrunkInst, canopyInst);
         }
 
+        // --- OCEAN BEACH (sand sloping down to the Pacific past the western map edge) ---
+        function createSandTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#e2c48e';
+            ctx.fillRect(0, 0, 256, 256);
+            const sandRandom = mulberry32(1906);
+            // Wind ripples running along the shore
+            for (let y = 0; y < 256; y += 9) {
+                ctx.strokeStyle = 'rgba(160, 135, 95, 0.18)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let x = 0; x <= 256; x += 8) {
+                    const wy = y + Math.sin(x * 0.05 + y) * 2.5;
+                    if (x === 0) ctx.moveTo(x, wy); else ctx.lineTo(x, wy);
+                }
+                ctx.stroke();
+            }
+            for (let i = 0; i < 3000; i++) {
+                const v = 170 + Math.floor(sandRandom() * 70);
+                ctx.fillStyle = `rgba(${v}, ${v - 20}, ${v - 60}, 0.5)`;
+                ctx.fillRect(sandRandom() * 256, sandRandom() * 256, 1.5, 1.5);
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.colorSpace = THREE.SRGBColorSpace;
+            return tex;
+        }
+
+        function buildOceanBeach() {
+            const sandTex = createSandTexture();
+
+            // Beach slope past the map edge: dry sand → wet sand → surf line, ending under the Pacific
+            const slopeWidth = 90, cols = 30, rows = 240;
+            const slope = new THREE.PlaneGeometry(slopeWidth, WORLD_SIZE, cols, rows);
+            slope.rotateX(-Math.PI / 2);
+            slope.translate(-OFFSET - slopeWidth / 2, 0, 0);
+            const sPos = slope.attributes.position;
+            const colors = [];
+            const dry = new THREE.Color(0xffffff), wet = new THREE.Color(0x9c8a68), foam = new THREE.Color(0xf4f8fa);
+            const waterY = -2.2;
+            for (let i = 0; i < sPos.count; i++) {
+                const x = sPos.getX(i), z = sPos.getZ(i);
+                const top = getElevation(-OFFSET, z) + 0.3;
+                const t = (-OFFSET - x) / slopeWidth; // 0 at the map edge, 1 out at sea
+                const y = top + (waterY - 4 - top) * Math.pow(t, 0.7);
+                sPos.setY(i, y);
+                const c = dry.clone();
+                if (y < waterY + 2.5) c.lerp(wet, Math.min(1, (waterY + 2.5 - y) / 2));
+                if (y < waterY + 0.6 && y > waterY - 0.4) c.copy(foam);
+                colors.push(c.r, c.g, c.b);
+            }
+            slope.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            slope.computeVertexNormals();
+            const slopeTex = sandTex.clone();
+            slopeTex.repeat.set(3, WORLD_SIZE / 30);
+            const beachSlope = new THREE.Mesh(slope, new THREE.MeshStandardMaterial({
+                map: slopeTex,
+                vertexColors: true,
+                roughness: 0.9,
+                metalness: 0.0
+            }));
+            beachSlope.receiveShadow = true;
+            scene.add(beachSlope);
+        }
+
         // --- GOLDEN GATE PARK (west-side green strip: Dutch Windmill, Stow Lake, de Young, Conservatory of Flowers) ---
         // Lays a horizontal geometry (already in world x/z) over the hills so it never floats or sinks
         function drapeOnTerrain(geo, lift) {
@@ -2520,15 +2590,15 @@
         }
 
         // --- ICONIC SAN FRANCISCO LANDMARKS ---
-        // 1. Golden Gate Bridge (Placed strictly at the North map boundary over water at Z = 685, NEVER inside the street grid!)
+        // 1. Golden Gate Bridge (Placed strictly at the North map boundary over water at Z = -685, NEVER inside the street grid!)
         function buildGoldenGateBridge() {
             const ggGroup = new THREE.Group();
             const intlOrange = new THREE.MeshStandardMaterial({ color: 0xc0362c, roughness: 0.38, metalness: 0.3 });
             const deckMat = new THREE.MeshStandardMaterial({ color: 0xa82e24, roughness: 0.5 });
 
-            const bridgeZ = 685; // Beyond the northern edge of the city grid (OFFSET = 600)
+            const bridgeZ = -685; // Beyond the northern edge of the city grid (z = -OFFSET, top of the minimap)
 
-            // Northern water under the Golden Gate Bridge. It starts at the city's north edge (z = OFFSET)
+            // Northern water under the Golden Gate Bridge. It starts at the city's north edge (z = -OFFSET)
             // so it can never flood streets; previously it reached 165 units into the grid at y = 12.
             const northBayDepth = 500;
             const northBayGeo = new THREE.PlaneGeometry(1800, northBayDepth);
@@ -2540,7 +2610,7 @@
                 clearcoat: 0.9
             });
             const northBay = new THREE.Mesh(northBayGeo, northBayMat);
-            northBay.position.set(-60, 12, OFFSET + 4 + northBayDepth / 2);
+            northBay.position.set(-60, 12, -(OFFSET + 4 + northBayDepth / 2));
             ggGroup.add(northBay);
 
             const towerXs = [-185, 35];
