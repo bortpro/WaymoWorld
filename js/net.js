@@ -1,4 +1,4 @@
-// Multiplayer client. Same protocol and server as the live game (see README "Message protocol").
+// Multiplayer client (see README "Message protocol").
 
 import { G, getElevation } from './shared.js';
 import { sound } from './sound.js';
@@ -8,7 +8,7 @@ const SERVER_URL = new URLSearchParams(location.search).get('server') ||
         ? 'ws://localhost:8080/ws'
         : 'wss://waymoworld-server.onrender.com/ws');
 
-// Anonymous per-browser ID so the server can count unique daily players (shared with the live game)
+// Anonymous per-browser ID so the server can count unique daily players
 const CLIENT_ID = (() => {
     try {
         let id = localStorage.getItem('sflasertaxi-cid');

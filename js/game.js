@@ -1,5 +1,5 @@
 // Gameplay: vehicles, lasers, effects. Physics, tuning and network behaviour are ported 1:1 from
-// the live game so this client plays identically and interoperates on the same server.
+// the original three.js game so this client plays identically and interoperates on the same server.
 
 import {
     G, OFFSET, CELL_SIZE, STREET_WIDTH, SHORE_X, SPAWN_PROTECTION,
@@ -82,7 +82,7 @@ export class Vehicle {
         this.pos.y = getElevation(this.pos.x, this.pos.z);
         this.root.position.copyFrom(this.pos);
 
-        // Align to the hill: right = normal x forward (matches the live game's basis)
+        // Align to the hill: right = normal x forward (matches the original three.js game's basis)
         const forward = V(Math.sin(this.angle), 0, Math.cos(this.angle));
         const normal = getTerrainNormal(this.pos.x, this.pos.z);
         const projForward = forward.subtract(normal.scale(BABYLON.Vector3.Dot(forward, normal))).normalize();
@@ -231,7 +231,7 @@ export class Vehicle {
         const normal = getTerrainNormal(this.pos.x, this.pos.z);
         const dir = forward.subtract(normal.scale(BABYLON.Vector3.Dot(forward, normal))).normalize();
 
-        // Aim assist, same cone as the live game
+        // Aim assist, same cone as the original three.js game
         let best = null, minAngle = 0.30;
         G.remoteVehicles.forEach(t => {
             const to = t.pos.subtract(this.pos);

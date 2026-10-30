@@ -1,6 +1,6 @@
 // San Francisco: terrain, streets, sidewalks, Victorian rows, downtown towers and landmarks.
 //
-// Building placement replays the live game's seeded generator call-for-call (cityRandom, seed 415),
+// Building placement replays the original three.js game's seeded generator call-for-call (cityRandom, seed 415),
 // so G.buildings matches every other client exactly. Everything visual on top of that is free to
 // be richer: real facades, bay windows, cornices, setbacks, rooftop clutter.
 
@@ -35,7 +35,7 @@ function trimRing(b, cx, cz, sx, sz, y, h, overhang, thick = 0.9, uv = [0.5, TRI
 
 export function buildCity(M) {
     const scene = G.scene;
-    const cityRandom = mulberry32(415);   // multiplayer contract: same call order as the live game
+    const cityRandom = mulberry32(415);   // multiplayer contract: same call order as the original three.js game
     const rnd = mulberry32(2718);          // cosmetic only
 
     const B = {
@@ -808,7 +808,7 @@ function buildFerryBuilding(B) {
 }
 
 function buildSutroTower(B) {
-    // On the southern hills beyond the grid (the live game's spot overlaps a block of houses)
+    // On the southern hills beyond the grid (the original three.js game's spot overlaps a block of houses)
     const sx = -430, sz = 628;
     const top = getElevation(sx, OFFSET), t = (sz - OFFSET) / 90;
     const sy = top + (WATER_Y - 5 - top) * Math.pow(t, 1.6);

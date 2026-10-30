@@ -4,7 +4,7 @@ A multiplayer browser game: players drive robotaxis around San Francisco and sho
 
 ## Status
 
-- **Frontend** (`index.html`): multiplayer game. A start modal asks for a username; a leaderboard (top right) shows players online and kill counts. Every other car is a real player (the old single-player bots were removed).
+- **Frontend** (`index.html` + `js/`): multiplayer game, rendered with Babylon.js 8.56.2 and CC0 Poly Haven assets. A start modal asks for a username; a leaderboard (top right) shows players online and kill counts. Every other car is a real player (the old single-player bots were removed).
 - **Backend** (`backend/`): WebSocket game server. Tracks players, broadcasts 20 Hz position snapshots, validates hits, and owns HP / kills / deaths.
 
 ## Deployments (Render)
@@ -21,7 +21,9 @@ A multiplayer browser game: players drive robotaxis around San Francisco and sho
 ## Layout
 
 ```
-index.html          # Whole frontend: one HTML file with an inline ES module, Three.js r160 from jsDelivr via importmap
+index.html          # Frontend page: HUD, start modal, loads Babylon.js 8.56.2 from jsDelivr and js/main.js
+js/                 # Frontend ES modules (see "Frontend" below)
+assets/             # Poly Haven textures, models and HDRI sky (gitignored; scripts/fetch_assets.py downloads them)
 backend/
   package.json      # Node >= 20, ESM, sole dependency: ws
   src/server.js     # HTTP server (/health, / dashboard, /debug/*) + WebSocketServer on /ws, player registry, 20 Hz snapshots, hit validation, 30s ping/pong heartbeat
@@ -30,11 +32,14 @@ backend/
 
 ## Running locally
 
-Frontend: serve the root folder with any static server, for example:
+Frontend: download the assets once, then serve the root folder with any static server:
 
 ```sh
-npx serve .
+python3 scripts/fetch_assets.py     # ~47 MB of CC0 Poly Haven assets into assets/ (stdlib only; skips files already there)
+python3 -m http.server 8000         # or: npx serve .
 ```
+
+Render static site settings for the frontend: build command `python3 scripts/fetch_assets.py`, publish directory `.` (the repo root).
 
 Backend:
 
@@ -71,14 +76,14 @@ Access: with no `DEBUG_TOKEN` env var set, it only answers direct localhost requ
 - **Each client owns its own car's movement** and sends `state` 20×/s. The server clamps it to the world bounds and rebroadcasts everyone in `snap`.
 - **Remote cars** ease toward the latest snapshot, extrapolating with `speed` for up to 250 ms; a jump of more than 40 units snaps (respawn).
 - **Hits are detected by the shooter's client** (its own lasers vs. remote cars) and reported as `hit`. The server rejects a hit if there's no unspent shot from the last 2 s, the target is more than 320 units away, or the target is within 2 s of (re)spawning. Otherwise it applies 25 damage.
-- **5 server-driven bots** (`BOT_NAMES` in `backend/src/server.js`) are always in the game. They use the same entity shape as players (`bot: true` in `welcome`/`join`), so snapshots, the leaderboard, and hits treat them the same. Bots drive intersection to intersection along street centerlines (`x, z = -585 + 100k`, which have no collision boxes), mostly toward the nearest human. They only fire straight down their own street, since that's guaranteed line of sight. The server can't see lasers, so the **victim's client** reports a bot laser hitting it with `botHit`, which goes through the same validation as `hit`. The server keeps its own copy of `getElevation()` for bot laser origins and aim, and it must match `index.html` exactly.
+- **5 server-driven bots** (`BOT_NAMES` in `backend/src/server.js`) are always in the game. They use the same entity shape as players (`bot: true` in `welcome`/`join`), so snapshots, the leaderboard, and hits treat them the same. Bots drive intersection to intersection along street centerlines (`x, z = -585 + 100k`, which have no collision boxes), mostly toward the nearest human. They only fire straight down their own street, since that's guaranteed line of sight. The server can't see lasers, so the **victim's client** reports a bot laser hitting it with `botHit`, which goes through the same validation as `hit`. The server keeps its own copy of `getElevation()` for bot laser origins and aim, and it must match `js/shared.js` exactly.
 - **The server owns HP, kills, and deaths.** At 0 HP it broadcasts `kill`, resets the victim to 100 HP, and heals the killer by 25. The victim's client picks a new random spawn point.
 - **The city is generated with a seeded RNG** (`cityRandom`, seed 415), so building heights, and therefore laser collisions, match on every client. Window textures still use `Math.random` (cosmetic only).
 - Clients on the start modal are connected but not joined: they receive all broadcasts (remote cars drive around behind the modal), but aren't in the roster.
 
 ## Message protocol
 
-All messages are JSON with a `type` field. Tuning constants are at the top of `backend/src/server.js`; keep them in sync with `index.html`.
+All messages are JSON with a `type` field. Tuning constants are at the top of `backend/src/server.js`; keep them in sync with `js/shared.js` and `js/game.js`.
 
 Client → server:
 
@@ -103,9 +108,37 @@ Server → client:
 | `kill` | `killer, victim, killerKills, victimDeaths` | |
 | `error` | `error` | e.g. invalid JSON |
 
-## Game state in `index.html`
+## Frontend
 
-The world is 3D with **y pointing up**; cars drive on the **x–z plane**. State lives in module-level globals: `player` (local car), `remoteVehicles` (Set of other players' cars), `roster` (Map id → `{id,name,kills,deaths,vehicle}`), `myId`, `lasers[]`, `particles[]`, `buildings[]` (collision boxes `{minX,maxX,minZ,maxZ,maxY}`), and `keys` (input).
+The CC0 Poly Haven assets (textures, two glTF models, the HDRI sky) are **not committed**: `assets/` is gitignored and `scripts/fetch_assets.py` downloads it at build time.
+
+URL flags: `?q=ultra|high|low` (graphics tier, also on the start screen), `?touch=1` (phone controls), `?ssao=1` (try ambient occlusion, currently noisy), `?server=...`.
+
+- **Lighting:** Poly Haven HDRI sky and image-based lighting, a sun aligned with the HDRI's sun, 3-cascade soft shadows.
+- **Post:** HDR pipeline (ACES, bloom, sharpen, vignette); screen-space reflections on Ultra; glow on lasers and lights.
+- **City:** Poly Haven asphalt, sidewalk, clapboard, plaster, brick, sandstone, shingle, grass and sand textures.
+  Facade atlases are painted at load time (windows with interior variation, trim, storefronts) with matching
+  normal and roughness maps, so glass reflects the sky.
+- **Buildings:** Victorian rows with bay windows, cornices, brackets and stoops; downtown towers with
+  storefronts, setbacks, awnings and rooftop clutter.
+- **Landmarks:** Transamerica Pyramid, Salesforce Tower, Coit Tower, Golden Gate and Bay bridges, Ferry Building,
+  Sutro Tower, Lombard planters, Golden Gate Park (windmill, Stow Lake, Conservatory), Ocean Beach.
+- **Streets:** painted lanes, crosswalks and stop bars, cable-car rails with moving cable cars, traffic signals
+  that cycle, Poly Haven street lamps and utility boxes, procedural trees, palms and cypresses, parked cars.
+- **Taxi:** procedural I-PACE-style robotaxi with clear-coat paint, roof lidar dome in team colour, aero wheels.
+- **Performance:** geometry merged per material in 300 m chunks (frustum culled per camera and cascade),
+  instancing for repeated props, dynamic resolution and automatic SSR drop below 45 fps.
+
+Files: `js/shared.js` world contract · `js/materials.js` textures and facades · `js/geo.js` geometry batching ·
+`js/city.js` city and landmarks · `js/props.js` vegetation, signals, models, cable cars · `js/car.js` taxi ·
+`js/game.js` vehicles, lasers, effects · `js/net.js` multiplayer · `js/hud.js` HUD and input · `js/main.js` boot and loop ·
+`js/sound.js` Web Audio synth.
+
+The previous single-file three.js frontend is in git history (the last version is `index.html` at commit `41cace1`).
+
+## Game state
+
+The world is 3D with **y pointing up**; cars drive on the **x–z plane**. State lives on the shared `G` object in `js/shared.js`: `G.player` (local car), `G.remoteVehicles` (Set of other players' cars), `G.roster` (Map id → `{id,name,kills,deaths,vehicle}`), `G.myId`, `G.lasers[]`, `G.buildings[]` (collision boxes `{minX,maxX,minZ,maxZ,maxY}`). In the browser console it's at `window.__sflt.G`.
 
 ### Car (`class Vehicle`)
 
@@ -117,7 +150,7 @@ The world is 3D with **y pointing up**; cars drive on the **x–z plane**. State
 | `hp` | 0–100 | yes |
 | `energy` | 0–100, spent on boost and shooting | probably only the owner needs it |
 | `pos.y` | worked out from the terrain (`getElevation(x, z)`) | no |
-| `mesh.quaternion` | tilt on hills, worked out from the terrain normal and `angle` | no |
+| `root.rotationQuaternion` | tilt on hills, worked out from the terrain normal and `angle` | no |
 | `maxSpeed`, `accel`, `handling` | fixed tuning values | no |
 | `lastShot` | timer that limits fire rate | no (owner only) |
 | `net` (remote cars only) | latest snapshot `{x,z,a,s,t}` that the rendered position eases toward | n/a |
@@ -143,7 +176,7 @@ We have an API key for Gemini 4.
 
 | Path | Owner | What |
 |---|---|---|
-| `index.html` | Eric | the deployed game (Render) |
+| `index.html`, `js/` | Eric | the deployed game (Render) |
 | `backend/` | Eric | multiplayer / WebSocket server |
 | `scripts/` | Argon loop | data fetch, Argon client, generate / render / loop |
 | `out/` | Argon loop | baseline and loop iterations |

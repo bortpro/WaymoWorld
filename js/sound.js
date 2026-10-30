@@ -1,4 +1,4 @@
-// Web Audio synth sounds, unchanged from the live game (index.html).
+// Web Audio synth sounds, carried over from the original three.js game.
 
 export class SoundEngine {
     constructor() {

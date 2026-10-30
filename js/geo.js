@@ -1,6 +1,6 @@
 // GeometryBatch: accumulates triangles for one material and builds a single merged mesh.
 // Merging the whole city into a handful of meshes keeps draw calls tiny (the main reason the
-// three.js version runs fast), so we can spend the GPU budget on lighting and post-processing.
+// original three.js version ran fast), so we can spend the GPU budget on lighting and post-processing.
 //
 // All helpers take faces wound counter-clockwise as seen from OUTSIDE (right-hand rule gives the
 // outward normal). Babylon's front faces are clockwise, so indices are emitted reversed.

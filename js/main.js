@@ -1,4 +1,4 @@
-// SF Laser Taxi, Babylon.js edition: boot, rendering pipeline, game loop, camera.
+// SF Laser Taxi: boot, rendering pipeline, game loop, camera.
 
 import { G, STATE_SEND_MS, getElevation, clamp, lerp } from './shared.js';
 import { createMaterials, setLoadProgressHandler } from './materials.js';
@@ -54,7 +54,7 @@ function createEngine() {
 
 function createScene(engine) {
     const scene = new BABYLON.Scene(engine);
-    scene.useRightHandedSystem = true;     // same coordinates as the live (three.js) game
+    scene.useRightHandedSystem = true;     // same coordinates as the server and the original three.js game
     scene.clearColor = new BABYLON.Color4(0.55, 0.7, 0.85, 1);
     scene.skipPointerMovePicking = true;
     scene.autoClear = false;               // skybox covers everything
@@ -73,10 +73,26 @@ function createScene(engine) {
 
 // HDRI sky + image-based lighting, sun aligned with the sun in the HDRI
 function createLighting(scene) {
-    const env = new BABYLON.HDRCubeTexture(HDRI, scene, 256, false, true, false, true);
+    // If the HDRI is missing (a deploy that skipped scripts/fetch_assets.py), drop the sky and IBL
+    // and fall back to a flat sky colour and a hemispheric fill, so the scene still becomes ready
+    let hdriFailed = false;
+    const noHdri = () => {
+        if (hdriFailed) return;
+        hdriFailed = true;
+        console.warn('failed to load ' + HDRI + ', using a flat sky');
+        scene.environmentTexture = null;
+        sky.dispose(false, true);
+        env.dispose();
+        scene.autoClear = true;
+        const fill = new BABYLON.HemisphericLight('skyFill', V(0, 1, 0), scene);
+        fill.intensity = 0.9;
+        fill.diffuse = new BABYLON.Color3(0.75, 0.85, 1.0);
+        fill.groundColor = new BABYLON.Color3(0.35, 0.32, 0.3);
+    };
+    const env = new BABYLON.HDRCubeTexture(HDRI, scene, 256, false, true, false, true, null, noHdri);
     scene.environmentTexture = env;
     scene.environmentIntensity = 0.85;
-    const skyTex = new BABYLON.HDRCubeTexture(HDRI, scene, 1024, true, false, false, false);
+    const skyTex = new BABYLON.HDRCubeTexture(HDRI, scene, 1024, true, false, false, false, null, noHdri);
     const sky = scene.createDefaultSkybox(skyTex, true, 5000, 0, false);
     sky.infiniteDistance = true;
     sky.isPickable = false;
@@ -317,7 +333,7 @@ async function main() {
     hud.setupInput(() => downgrade(''));
     document.getElementById('start-btn').addEventListener('click', startGame);
     const nameInput = document.getElementById('name-input');
-    try { nameInput.value = localStorage.getItem('waymoworld-name') || ''; } catch {}
+    try { nameInput.value = localStorage.getItem('sflasertaxi-name') || ''; } catch {}
     nameInput.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') startGame(); });
     nameInput.addEventListener('keyup', e => e.stopPropagation());
     if (!G.isTouch) nameInput.focus();
@@ -417,7 +433,7 @@ function startGame() {
     if (G.gameActive || document.getElementById('start-btn').disabled) return;
     const nameInput = document.getElementById('name-input');
     G.myName = nameInput.value.trim().slice(0, 16);
-    try { localStorage.setItem('waymoworld-name', G.myName); } catch {}
+    try { localStorage.setItem('sflasertaxi-name', G.myName); } catch {}
     nameInput.blur();
     document.getElementById('overlay').classList.add('hidden');
     sound.init();

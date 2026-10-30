@@ -1,9 +1,9 @@
 # /// script
 # requires-python = ">=3.10"
 # ///
-"""Download the CC0 Poly Haven assets SF Laser Taxi (Babylon edition) uses into babyexpt/assets/.
+"""Download the CC0 Poly Haven assets SF Laser Taxi uses into assets/.
 
-    uv run babyexpt/fetch_assets.py
+    uv run scripts/fetch_assets.py
 
 Everything comes from https://polyhaven.com (CC0, no attribution required, redistribution allowed).
 Re-running skips files that are already present.
@@ -13,7 +13,7 @@ import sys
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent / "assets"
+ROOT = Path(__file__).resolve().parent.parent / "assets"
 API = "https://api.polyhaven.com/files/"
 
 # name -> resolution. Maps: diffuse (albedo), nor_gl (OpenGL normal), arm (AO / roughness / metal)

@@ -26,15 +26,38 @@ function track(promise) {
 }
 
 export function loadImage(url) {
-    return track(new Promise((resolve, reject) => {
+    return track(new Promise((resolve) => {
         const img = new Image();
         img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error('failed to load ' + url));
+        // A missing asset (e.g. a deploy that skipped scripts/fetch_assets.py) must not stop the
+        // game from booting and connecting: paint with a plain light surface instead
+        img.onerror = () => {
+            console.warn('failed to load ' + url + ', using a plain surface');
+            const c = makeCanvas(64);
+            const ctx = c.getContext('2d');
+            ctx.fillStyle = '#d9d6cf';
+            ctx.fillRect(0, 0, 64, 64);
+            resolve(c);
+        };
         img.src = url;
     }));
 }
 
 function anisotropy() { return G.quality === 'low' ? 4 : 16; }
+
+// 4x4 single-colour stand-ins for a Poly Haven map: neutral albedo, flat normal, AO 1 / rough / non-metal
+const FLAT_MAPS = { diff: '#9a9890', nor: 'rgb(128,128,255)', arm: 'rgb(255,235,0)' };
+const flatMapURLs = {};
+function flatMapURL(suffix) {
+    if (!flatMapURLs[suffix]) {
+        const c = makeCanvas(4);
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = FLAT_MAPS[suffix];
+        ctx.fillRect(0, 0, 4, 4);
+        flatMapURLs[suffix] = c.toDataURL('image/png');
+    }
+    return flatMapURLs[suffix];
+}
 
 // Poly Haven texture set as a Babylon texture (waits for load so the start button knows when we're ready)
 export function phTexture(name, suffix, { linear = false } = {}) {
@@ -46,7 +69,12 @@ export function phTexture(name, suffix, { linear = false } = {}) {
             invertY: true,
             samplingMode: BABYLON.Texture.TRILINEAR_SAMPLINGMODE,
             onLoad: resolve,
-            onError: resolve,
+            onError: () => {
+                // missing asset: a flat map instead of Babylon's red/black error checkerboard
+                console.warn(`failed to load ${TEX}${name}_${suffix}.jpg, using a flat map`);
+                setTimeout(() => tex.updateURL(flatMapURL(suffix)));
+                resolve();
+            },
         });
     });
     track(p);

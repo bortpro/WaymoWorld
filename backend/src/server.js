@@ -8,7 +8,7 @@ const PORT = Number(process.env.PORT) || 8080;
 // Required to view /debug from anywhere but localhost (set it on Render).
 const DEBUG_TOKEN = process.env.DEBUG_TOKEN || '';
 
-// Game tuning (keep in sync with index.html)
+// Game tuning (keep in sync with js/shared.js and js/game.js)
 const TICK_MS = 50;               // 20 Hz snapshots
 const MAX_HP = 100;
 const LASER_DAMAGE = 25;
@@ -33,7 +33,7 @@ const BOT_CHASE_RANGE = 450;      // bots steer toward the nearest human within 
 const BOT_CHASE_CHANCE = 0.7;     // ...at this fraction of intersections
 const BOT_AIM_SPREAD = 2.0;       // random aim offset (units) so bots don't hit every shot
 
-// City street grid (mirrors index.html: CELL_SIZE 100, STREET_WIDTH 30, OFFSET 600).
+// City street grid (mirrors js/shared.js: CELL_SIZE 100, STREET_WIDTH 30, OFFSET 600).
 // Streets have no collision boxes, so bots drive intersection to intersection
 // along street centerlines and never need to know where the buildings are.
 const CELL_SIZE = 100;
@@ -44,7 +44,7 @@ const STREET_J = [1, 11];         // east-west streets   z = -585 + 100j
 const streetX = (i) => -OFFSET + i * CELL_SIZE + STREET_WIDTH / 2;
 const streetZ = (j) => -OFFSET + j * CELL_SIZE + STREET_WIDTH / 2;
 
-// Must match getElevation() in index.html exactly: bot laser origins and aim depend on it.
+// Must match getElevation() in js/shared.js exactly: bot laser origins and aim depend on it.
 function getElevation(x, z) {
   if (x > 450) return -8;
   let bayFactor = 1;

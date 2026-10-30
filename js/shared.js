@@ -1,4 +1,4 @@
-// World contract shared with the live game (root index.html) and the server (backend/src/server.js).
+// World contract shared with the server (backend/src/server.js).
 // The street grid, elevation function and seeded city RNG must stay identical so this client can
 // join the same multiplayer server: bots drive the same streets and laser/building collisions agree.
 
@@ -33,7 +33,7 @@ export function mulberry32(seed) {
     };
 }
 
-// SF hills. Preserved exactly from the live game (multiplayer contract)
+// SF hills. Must match getElevation() in backend/src/server.js exactly (multiplayer contract)
 export function getElevation(x, z) {
     if (x > 450) return -8;
     let bayFactor = 1;
@@ -80,7 +80,7 @@ export const G = {
     glow: null,           // GlowLayer
     quality: 'high',
     player: null,
-    buildings: [],        // collision AABBs {minX,maxX,minZ,maxZ,maxY}, same order/values as the live game
+    buildings: [],        // collision AABBs {minX,maxX,minZ,maxZ,maxY}, same order/values as the original three.js game
     obstacles: [],        // local-only AABBs (parked cars): block our car and our lasers
     lasers: [],
     remoteVehicles: new Set(),
