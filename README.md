@@ -23,7 +23,7 @@ A multiplayer browser game: players drive robotaxis around San Francisco and sho
 ```
 index.html          # Frontend page: HUD, start modal, loads Babylon.js 8.56.2 from jsDelivr and js/main.js
 js/                 # Frontend ES modules (see "Frontend" below)
-assets/             # Poly Haven textures, models and HDRI sky (gitignored; scripts/fetch_assets.py downloads them)
+assets/             # CC0 Poly Haven textures, models and HDRI sky (committed; scripts/fetch_assets.py re-downloads them)
 backend/
   package.json      # Node >= 20, ESM, sole dependency: ws
   src/server.js     # HTTP server (/health, / dashboard, /debug/*) + WebSocketServer on /ws, player registry, 20 Hz snapshots, hit validation, 30s ping/pong heartbeat
@@ -32,14 +32,13 @@ backend/
 
 ## Running locally
 
-Frontend: download the assets once, then serve the root folder with any static server:
+Frontend: serve the root folder with any static server:
 
 ```sh
-python3 scripts/fetch_assets.py     # ~47 MB of CC0 Poly Haven assets into assets/ (stdlib only; skips files already there)
 python3 -m http.server 8000         # or: npx serve .
 ```
 
-Render static site settings for the frontend: build command `python3 scripts/fetch_assets.py`, publish directory `.` (the repo root).
+The Render static site needs no build step: it publishes the repo root as-is, `assets/` included.
 
 Backend:
 
@@ -110,7 +109,7 @@ Server → client:
 
 ## Frontend
 
-The CC0 Poly Haven assets (textures, two glTF models, the HDRI sky) are **not committed**: `assets/` is gitignored and `scripts/fetch_assets.py` downloads it at build time.
+The CC0 Poly Haven assets (textures, two glTF models, the HDRI sky, ~45 MB) are committed in `assets/`. `scripts/fetch_assets.py` (stdlib only) downloads them from Poly Haven, skipping files already there; edit its lists and re-run it to add or swap assets. If an asset is missing the game still runs, with plain surfaces and a flat sky.
 
 URL flags: `?q=ultra|high|low` (graphics tier, also on the start screen), `?touch=1` (phone controls), `?ssao=1` (try ambient occlusion, currently noisy), `?server=...`.
 

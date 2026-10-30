@@ -6,5 +6,3 @@ data/
 __pycache__/
 .cache/
 
-# Poly Haven assets: fetched at deploy time by scripts/fetch_assets.py (CC0, ~47 MB)
-/assets/
