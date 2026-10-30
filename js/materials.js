@@ -189,6 +189,51 @@ function tileImage(ctx, img, size, repeats, rotate = false, tint = null) {
     }
 }
 
+// Greyscale copy of a photo texture normalised to a light mean, so multiplying a paint colour by it
+// keeps the surface detail without darkening or tinting the paint (raw siding photos are ~70% beige)
+function detailImage(img, mean = 0.94, contrast = 0.8) {
+    const c = makeCanvas(img.width, img.height);
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const d = ctx.getImageData(0, 0, c.width, c.height);
+    const px = d.data;
+    let sum = 0;
+    for (let i = 0; i < px.length; i += 4) sum += 0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2];
+    const avg = sum / (px.length / 4) / 255;
+    for (let i = 0; i < px.length; i += 4) {
+        const l = (0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2]) / 255;
+        px[i] = px[i + 1] = px[i + 2] = Math.round(Math.min(1, Math.max(0, mean + (l - avg) * contrast)) * 255);
+    }
+    ctx.putImageData(d, 0, 0);
+    return c;
+}
+
+// Recolour Poly Haven's leafy_grass (mostly dead brown leaves) into a lush, watered lawn: luminance
+// detail is kept, hue goes to greens, with fresh yellow-green where the photo was already green
+function lushGrass(img) {
+    const c = makeCanvas(img.width, img.height);
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const d = ctx.getImageData(0, 0, c.width, c.height);
+    const px = d.data;
+    let sum = 0;
+    for (let i = 0; i < px.length; i += 4) sum += 0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2];
+    const avg = sum / (px.length / 4) / 255;
+    const dark = [38, 92, 26], light = [118, 178, 54], fresh = [150, 196, 60];
+    for (let i = 0; i < px.length; i += 4) {
+        const r = px[i], g = px[i + 1], b = px[i + 2];
+        const l = (0.3 * r + 0.59 * g + 0.11 * b) / 255;
+        const t = Math.min(1, Math.max(0, 0.5 + (l - avg) * 2.4));
+        const green = Math.min(1, Math.max(0, (g - r) / 40));     // was this pixel grass in the photo?
+        for (let k = 0; k < 3; k++) {
+            const base = dark[k] + (light[k] - dark[k]) * t;
+            px[i + k] = Math.round(base + (fresh[k] * (0.6 + 0.4 * t) - base) * green * 0.5);
+        }
+    }
+    ctx.putImageData(d, 0, 0);
+    return c;
+}
+
 // Window glass with interior variation: blinds, curtains, dark rooms, the odd lamp
 function paintGlass(p, x, y, w, h, rnd, { tint = '#1d2a33', metal = 0.35, rough = 0.06 } = {}) {
     const r = rnd();
@@ -220,10 +265,10 @@ function victorianFacade(pal, imgs, seed) {
 
     // Wall: clapboard (planks rotated to run horizontally) or smooth stucco, tinted to the body colour
     if (pal.siding === 'plaster') {
-        tileImage(p.A, imgs.plaster, S, 3, false, pal.base);
+        tileImage(p.A, imgs.plasterDetail, S, 3, false, pal.base);
         p.fill(0, 0, T.w, T.h, null, 0.5, [1, 0.78, 0]);
     } else {
-        tileImage(p.A, imgs.planks, S, 4, true, pal.base);
+        tileImage(p.A, imgs.planksDetail, S, 4, true, pal.base);
         // clapboard profile: each board's bottom edge overlaps the next, giving a saw-tooth height
         const board = 0.19;
         for (let y = 0; y < T.h; y += board) {
@@ -459,25 +504,29 @@ export function radialCanvas(size, stops) {
     return c;
 }
 
-// Victorian palettes: body, trim, accent (Painted Ladies colour schemes)
+// Victorian palettes: body, trim, accent. 0-5 are Painted Ladies clapboard (the Postcard Row block
+// uses them in order), 6-9 are Outer Sunset pastel stucco with bold doors and trim.
 export const VICTORIAN_PALETTES = [
-    { base: '#e2b35a', trim: '#f5efe0', accent: '#7b3a2c', siding: 'planks' },  // golden ochre
-    { base: '#6fb3a5', trim: '#f1f3ec', accent: '#2f4f5e', siding: 'planks' },  // seafoam
-    { base: '#d17d8e', trim: '#f6ece6', accent: '#5a2a3f', siding: 'planks' },  // rose
-    { base: '#7199c6', trim: '#eef1f4', accent: '#c8963e', siding: 'planks' },  // pacific blue
-    { base: '#d9cbb3', trim: '#fbf8f1', accent: '#3d5a6c', siding: 'plaster' }, // Edwardian stucco
-    { base: '#8faa7f', trim: '#eef0e6', accent: '#6b3b2a', siding: 'planks' },  // sage
-    { base: '#efe7d6', trim: '#ffffff', accent: '#2c4a5a', siding: 'plaster' }, // white stucco
-    { base: '#b5675a', trim: '#f2e6d4', accent: '#e0b354', siding: 'planks' },  // terracotta
+    { base: '#f2c14e', trim: '#ffffff', accent: '#2f6f8f', siding: 'planks' },  // butter yellow / teal
+    { base: '#7cc6b4', trim: '#fffaf0', accent: '#c2414b', siding: 'planks' },  // mint / cherry
+    { base: '#f08a9c', trim: '#fff4ec', accent: '#3b6e8f', siding: 'planks' },  // bubblegum rose / slate blue
+    { base: '#78a7e0', trim: '#ffffff', accent: '#e8a33a', siding: 'planks' },  // periwinkle / gold
+    { base: '#b59ad8', trim: '#fbf7ff', accent: '#2e8c7a', siding: 'planks' },  // lavender / jade
+    { base: '#f4a36c', trim: '#fff8ee', accent: '#5a3d7a', siding: 'planks' },  // apricot / plum
+    { base: '#cfe8d0', trim: '#ffffff', accent: '#e2574c', siding: 'plaster' }, // Sunset mint / coral door
+    { base: '#fbe3a8', trim: '#ffffff', accent: '#2a7f8f', siding: 'plaster' }, // Sunset butter / teal
+    { base: '#f6c3b5', trim: '#ffffff', accent: '#355c7d', siding: 'plaster' }, // Sunset salmon / navy
+    { base: '#bfe0f2', trim: '#ffffff', accent: '#f2b134', siding: 'plaster' }, // Sunset sky / mustard
 ];
 
 export async function createMaterials() {
     const scene = G.scene;
     const img = (n) => loadImage(`${TEX}${n}_diff.jpg`);
-    const [planks, plaster, brick, sandstone] = await Promise.all([
+    const [planks, plaster, brick, sandstone, grass] = await Promise.all([
         img('white_planks_clean'), img('painted_plaster_wall'), img('red_brick_03'), img('white_sandstone_blocks_02'),
+        img('leafy_grass'),
     ]);
-    const imgs = { planks, plaster, brick, sandstone };
+    const imgs = { planks, plaster, brick, sandstone, planksDetail: detailImage(planks), plasterDetail: detailImage(plaster, 0.96, 0.6) };
 
     const M = {};
     M.victorian = VICTORIAN_PALETTES.map((pal, i) => facadeMaterial('victorian' + i, victorianFacade(pal, imgs, 100 + i)));
@@ -490,8 +539,10 @@ export async function createMaterials() {
     M.asphalt = phMaterial('asphalt_02', { bump: 0.8, tint: '#ffffff', albedoBoost: 1.3 });
     M.asphalt.useVertexColors = true;    // large-scale patching variation baked into terrain colours
     M.sidewalk = phMaterial('concrete_pavement', { bump: 0.7, tint: '#d6d2c8', albedoBoost: 1.1 });
-    M.roofShingle = phMaterial('grey_roof_01', { bump: 1.0, tint: '#8a8f96' });
+    M.roofShingle = phMaterial('grey_roof_01', { bump: 1.0, tint: '#b3aca3', albedoBoost: 1.3 });
     M.grass = phMaterial('leafy_grass', { bump: 0.9 });
+    M.grass.albedoTexture.dispose();
+    M.grass.albedoTexture = canvasTexture('grass_a', lushGrass(grass));
     M.sand = phMaterial('coast_sand_01', { bump: 0.6, tint: '#e9dcc0', albedoBoost: 1.15 });
     M.sand.useVertexColors = true;
     M.sandstone = phMaterial('white_sandstone_blocks_02', { bump: 0.8 });
@@ -500,7 +551,7 @@ export async function createMaterials() {
 
     M.flatRoof = new BABYLON.PBRMaterial('flatRoof', scene);
     M.flatRoof.albedoTexture = phTexture('asphalt_02', 'diff');
-    M.flatRoof.albedoColor = new BABYLON.Color3(0.55, 0.55, 0.57);
+    M.flatRoof.albedoColor = new BABYLON.Color3(0.8, 0.79, 0.77);    // light tar-and-gravel
     M.flatRoof.bumpTexture = phTexture('asphalt_02', 'nor', { linear: true });
     M.flatRoof.metallic = 0;
     M.flatRoof.roughness = 0.92;
@@ -565,7 +616,7 @@ export async function createMaterials() {
     };
     M.leaves = foliage('leaves', leafCanvas(512, false), '#d6efc0');
     M.palmFronds = foliage('palmFronds', leafCanvas(512, true), '#e4f0c8');
-    M.cypressLeaves = foliage('cypressLeaves', leafCanvas(512, false), '#7d9a74');
+    M.cypressLeaves = foliage('cypressLeaves', leafCanvas(512, false), '#98c084');
     M.bark = solid('bark', '#4f4136', 0.9);
     M.palmBark = solid('palmBark', '#7d6a52', 0.85);
     return M;

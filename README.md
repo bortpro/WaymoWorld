@@ -39,6 +39,10 @@ Frontend: serve the root folder with any static server:
 python3 -m http.server 8000         # or: npx serve .
 ```
 
+Then open http://localhost:8000/ (add `?q=ultra` for top graphics). Opening `index.html` straight from disk
+(`file://`) doesn't work: browsers block the ES modules and texture loads. Without the backend running the page
+sits on "connecting…" but you can still drive around. Hard-refresh (Cmd+Shift+R) after pulling changes.
+
 The Render static site needs no build step: it publishes the repo root as-is, `assets/` included.
 
 Backend:
@@ -224,8 +228,10 @@ Other clients and the server assume these exact values. Change them only togethe
 - **Lighting:** `kloofendal_48d_partly_cloudy_puresky` HDRI as both the skybox (1024 cube) and IBL (256,
   prefiltered, `environmentIntensity 0.85`); directional sun at intensity 3.4, slightly warm.
 - **Post** (`createPipelines()`): `DefaultRenderingPipeline` in HDR with ACES tone mapping (exposure 1.15,
-  contrast 1.12), bloom (threshold 0.92, weight 0.22), sharpen (not on low), vignette (stronger while boosting).
+  contrast 1.12, colour-curves saturation +22 so ACES doesn't grey the paint out), bloom (threshold 0.92, weight
+  0.22), sharpen (not on low), vignette (stronger while boosting).
   SSR on ultra: strength 0.85, max distance 320, roughness factor 0.15, Fresnel, screen-border attenuation.
+  Keep `blurDispersionStrength` at 0: any dispersion blur smears a hard-edged dark disc across the sky.
 - **Camera:** chase camera 10.5 back / 4.2 up (pulls back slightly with speed), pushed out of buildings, FOV widens
   with speed and boost, wider base FOV in portrait, shake on hits and nearby kills.
 - **Dynamic resolution** (watchdog in `main()`): every 2 s of play, if average fps < 45 it first disposes SSR
@@ -255,7 +261,10 @@ watchdog working.
   crosswalks, cable-car rails on Powell x = −185 and California x = 115) as draped strips with `zOffset −2`; shore
   aprons north and south; Ocean Beach slope with wet sand and a foam line; one big water plane at y = −2.2 with a
   scrolling procedural normal map.
-- **Victorian rows (`buildVictorian`):** 8 palettes (`VICTORIAN_PALETTES`) on clapboard or stucco; visible wall height
+- **Victorian rows (`buildVictorian`):** 10 palettes (`VICTORIAN_PALETTES`): 0–5 saturated Painted Ladies clapboard,
+  6–9 Outer Sunset pastel stucco with bold mustard / coral / teal doors and trim. The siding photos are turned into
+  neutral, light greyscale detail (`detailImage()`) before the paint is multiplied in, so colours stay clean instead
+  of going muddy. Visible wall height
   snapped to whole floors; two three-sided bay windows per street face; cornice ring with brackets; front door with
   stoop; 45% hip roofs (shingle), the rest Italianate flat roofs with parapets; the Painted Ladies block (gx 4, gz 5)
   uses palettes 0–5 in order with steep front gables.
@@ -265,8 +274,9 @@ watchdog working.
 - **Landmarks:** Transamerica Pyramid (banded faces so windows keep real size), Salesforce Tower (tapered rounded
   glass, lattice crown), Coit Tower (fluted, belvedere), Golden Gate Bridge (stepped towers, catenary cables,
   suspenders), Bay Bridge, Ferry Building, Sutro Tower (moved onto the southern hills because the original spot
-  overlaps houses), Lombard planters, Golden Gate Park (lawns, Dutch windmill with spinning sails, Stow Lake,
-  Conservatory of Flowers), tower crane.
+  overlaps houses), Lombard planters, Golden Gate Park (lawns, Dutch windmill with spinning sails and a ring of
+  tulip beds, Stow Lake, Conservatory of Flowers with a flower parterre in front), tower crane. The lawn texture is
+  Poly Haven `leafy_grass` recoloured to lush green at load (`lushGrass()`; the photo itself is mostly dead leaves).
 - **Props (`props.js`):** street trees, Canary palms (downtown and gz 5) and Monterey cypresses (park) as
   alpha-tested leaf cards with translucency; traffic signals with N-S / E-W phases on a 36 s cycle; parked cars
   (6 paint colours); Poly Haven `street_lamp_01` (×1.75) and `utility_box_01`; 3 animated cable cars.
@@ -304,8 +314,10 @@ bugs here (no sunlight, SSAO noise, mirrored decal) were only visible in screens
 - **The taxi is procedural.** A licensed glTF car model would look better; keep the node names above.
 - Ideas not started: wet-road puddles (SSR already reflects smooth surfaces), pedestrians, moving traffic,
   distant-building LODs or impostors, a reflection probe for the bay, interior lights at windows.
-- The graphics brief so far has been **daytime only, no fog, realistic placement**; check with the team before
-  adding night or fog.
+- The graphics brief so far has been **daytime only, no fog, realistic placement**, and colourful rather than grey
+  (feedback: houses should feel like the Painted Ladies / Outer Sunset, the park lush and green); check with the
+  team before adding night or fog.
+- **Flower beds** read a little pale at grazing angles (specular on the shared `hedgeMat`).
 
 The previous single-file three.js frontend is in git history (the last version is `index.html` at commit `41cace1`).
 

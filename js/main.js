@@ -170,7 +170,7 @@ function createPipelines(scene) {
             ssr.thickness = 0.7;
             ssr.roughnessFactor = 0.15;
             ssr.reflectivityThreshold = 0.03;
-            ssr.blurDispersionStrength = 0.025;
+            ssr.blurDispersionStrength = 0;    // any dispersion blur smears a hard-edged dark disc over the sky
             ssr.blurDownsample = 1;
             ssr.ssrDownsample = 1;
             ssr.selfCollisionNumSkip = 2;
@@ -198,6 +198,10 @@ function createPipelines(scene) {
     ip.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
     ip.exposure = 1.15;
     ip.contrast = 1.12;
+    // ACES flattens saturated paint; win some colour back so the city doesn't read grey
+    ip.colorCurvesEnabled = true;
+    ip.colorCurves = new BABYLON.ColorCurves();
+    ip.colorCurves.globalSaturation = 22;
     ip.vignetteEnabled = true;
     ip.vignetteWeight = 1.6;
     ip.vignetteStretch = 0.3;

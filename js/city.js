@@ -642,7 +642,8 @@ function buildGoldenGatePark(B, parkBlocks, props, rnd) {
         const keepClear = [];
         if (gx === 0) {
             buildWindmill(B, bx + 12, bz, getElevation(bx + 12, bz));
-            keepClear.push([bx + 12, bz, 14]);
+            buildTulipGarden(B, bx + 12, bz);
+            keepClear.push([bx + 12, bz, 15]);
         } else if (gx === 2) {
             // Stow Lake: water disc with a wooded island
             const lake = BABYLON.MeshBuilder.CreateDisc('stowLake', { radius: 20, tessellation: 48, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, G.scene);
@@ -654,7 +655,8 @@ function buildGoldenGatePark(B, parkBlocks, props, rnd) {
             for (let i = 0; i < 4; i++) props.cypress.push({ x: bx + (rnd() - 0.5) * 6, z: bz + (rnd() - 0.5) * 6, s: 0.7 + rnd() * 0.3 });
         } else if (gx === 3) {
             buildConservatory(B, bx, bz, getElevation(bx, bz));
-            keepClear.push([bx, bz, 20]);
+            buildFlowerParterre(B, bx, bz + 17);
+            keepClear.push([bx, bz, 20], [bx, bz + 17, 14]);
         }
         for (let i = 0; i < 26; i++) {
             const x = bx + (rnd() - 0.5) * (half * 2 - 6), z = bz + (rnd() - 0.5) * (half * 2 - 6);
@@ -662,6 +664,34 @@ function buildGoldenGatePark(B, parkBlocks, props, rnd) {
             const r = rnd();
             if (r < 0.35) props.cypress.push({ x, z, s: 0.8 + rnd() * 0.5 });
             else props.trees.push({ x, z, s: 0.9 + rnd() * 0.6 });
+        }
+    }
+}
+
+const FLOWER_COLORS = [[0.95, 0.12, 0.2], [1.0, 0.55, 0.75], [1.0, 0.82, 0.15], [0.98, 0.45, 0.1], [0.6, 0.3, 0.85], [1, 1, 0.95]];
+
+// A low hedge-bordered bed filled with blooms in one colour (beds are cosmetic: no collision box)
+function flowerBed(B, x, z, w, d, color, rotY = 0) {
+    const y = getElevation(x, z);
+    B.hedge.setColor(0.16, 0.4, 0.12);
+    B.hedge.box(x, y + 0.3, z, w + 0.6, 0.6, d + 0.6, { uv: 2, rotY });
+    B.hedge.setColor(...color);
+    B.hedge.box(x, y + 0.75, z, w, 0.5, d, { uv: 2, rotY });
+}
+
+// Queen Wilhelmina Tulip Garden: a ring of beds around the Dutch Windmill
+function buildTulipGarden(B, x, z) {
+    for (let i = 0; i < 10; i++) {
+        const a = i / 10 * Math.PI * 2;
+        flowerBed(B, x + Math.cos(a) * 11, z + Math.sin(a) * 11, 4.2, 1.6, FLOWER_COLORS[i % 5], Math.PI / 2 - a);
+    }
+}
+
+// Formal parterre in front of the Conservatory of Flowers
+function buildFlowerParterre(B, x, z) {
+    for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 5; col++) {
+            flowerBed(B, x - 16 + col * 8, z - 5 + row * 5, 5.5, 2.6, FLOWER_COLORS[(row * 2 + col) % FLOWER_COLORS.length]);
         }
     }
 }
