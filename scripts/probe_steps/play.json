@@ -1,0 +1,7 @@
+[
+["menu", "new Promise(r => setTimeout(() => r('menu'), 1500))"],
+["start", "(() => { document.getElementById('name-input').value = 'probe'; document.getElementById('start-btn').click(); return 'started'; })()"],
+["chase", "new Promise(r => setTimeout(() => { const G = __sflt.G; let best = null, bd = 1e9; G.remoteVehicles.forEach(v => { const d = Math.hypot(v.pos.x - G.player.pos.x, v.pos.z - G.player.pos.z); if (d < bd) { bd = d; best = v; } }); if (!best) return r('no remote cars (is the backend running?)'); G.player.pos.x = best.pos.x - Math.sin(best.angle) * 28; G.player.pos.z = best.pos.z - Math.cos(best.angle) * 28; G.player.angle = best.angle; G.keys.w = true; r('behind ' + best.name); }, 3500))"],
+["fire", "new Promise(r => setTimeout(() => { __sflt.G.keys.w = false; window.__fire = setInterval(() => { const p = __sflt.G.player; p.lastShot = -10; p.energy = 100; p.shoot(); }, 180); r('firing'); }, 1500))"],
+["result", "new Promise(r => setTimeout(() => { clearInterval(window.__fire); r(JSON.stringify({ fps: __sflt.engine.getFps().toFixed(0), scaling: __sflt.engine.getHardwareScalingLevel().toFixed(2), lasers: __sflt.G.lasers.length })); }, 700))"]
+]
