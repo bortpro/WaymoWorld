@@ -1,11 +1,10 @@
 // Street furniture and vegetation: Poly Haven lamps / utility boxes (glTF), procedural trees,
-// palms and cypresses (alpha-tested leaf cards), traffic signals with live phases, parked cars.
+// palms and cypresses (alpha-tested leaf cards), traffic signals with live phases.
 // Everything repeated is instanced: thin instances for vegetation, InstancedMesh (with distance
 // culling) for the high-poly scanned models.
 
 import { G, mulberry32, getElevation, getTerrainNormal } from './shared.js';
 import { GeometryBatch } from './geo.js';
-import { createParkedCarTemplates } from './car.js';
 
 const V = (x, y, z) => new BABYLON.Vector3(x, y, z);
 
@@ -268,17 +267,6 @@ export async function buildProps(props, M) {
     plantVariants(props.cypress, [makeTree(31, 'cypress'), makeTree(32, 'cypress')], M, M.cypressLeaves || M.leaves, M.bark, 'cypress');
 
     const signals = buildSignals(props.signals, M);
-
-    // Parked cars (one InstancedMesh source per paint colour)
-    const templates = createParkedCarTemplates(G.scene);
-    const byColor = templates.map(() => []);
-    for (const p of thin(props.parked, 2)) byColor[p.c % templates.length].push(p);
-    byColor.forEach((list, i) => {
-        const placed = list.map(p => ({ x: p.x, y: getElevation(p.x, p.z), z: p.z, ry: p.a }));
-        instanceAll(templates[i], placed, 1, low ? 160 : 320);
-        for (const p of list) G.obstacles.push({ minX: p.x - (Math.abs(Math.sin(p.a)) > 0.5 ? 2.4 : 1.05), maxX: p.x + (Math.abs(Math.sin(p.a)) > 0.5 ? 2.4 : 1.05),
-            minZ: p.z - (Math.abs(Math.sin(p.a)) > 0.5 ? 1.05 : 2.4), maxZ: p.z + (Math.abs(Math.sin(p.a)) > 0.5 ? 1.05 : 2.4), maxY: getElevation(p.x, p.z) + 1.7 });
-    });
 
     // Scanned street lamps and utility cabinets
     try {
