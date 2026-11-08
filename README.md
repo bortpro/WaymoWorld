@@ -11,11 +11,14 @@ A multiplayer browser game: players drive robotaxis around San Francisco and sho
 
 | Part     | URL                                       |
 | -------- | ----------------------------------------- |
-| Frontend | https://waymoworld.onrender.com/          |
+| Frontend | https://sflasertaxi.com/ (custom domain)  |
+| Frontend | https://waymoworld.onrender.com/ (Render) |
 | Backend  | https://waymoworld-server.onrender.com    |
 
+- `sflasertaxi.com` sits behind Cloudflare: `www.` and `http://` redirect to `https://sflasertaxi.com/`. Pages are
+  cached at the edge, so purge the Cloudflare cache after a deploy if players still get the old JS.
 - WebSocket endpoint: `wss://waymoworld-server.onrender.com/ws`
-- Health check: `https://waymoworld-server.onrender.com/health` returns `{ ok, clients, players }`
+- Health check: `https://waymoworld-server.onrender.com/health` returns `{ ok, clients, players, bots }`
 - Debug dashboard: `https://waymoworld-server.onrender.com/?token=<DEBUG_TOKEN>` (see below)
 
 ## Layout
