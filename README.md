@@ -127,8 +127,12 @@ re-discovering everything. Read "World contract" and "Conventions" before changi
 - **Coordinates:** `scene.useRightHandedSystem = true`, y up, cars on the x–z plane, heading `a` means forward
   `(sin a, 0, cos a)`. North is **−z** (Golden Gate Bridge at z = −705), the bay is east (**x > 395**, the drivable
   limit `SHORE_X`), Ocean Beach is west (x < −600). 1 unit ≈ 1 m (the taxi is 4.8 long).
-- **Assets:** CC0 Poly Haven files, committed in `assets/` (~45 MB). `scripts/fetch_assets.py` (stdlib only)
-  re-downloads them; to add or swap an asset, edit its `TEXTURES` / `MODELS` / `HDRIS` lists and re-run it.
+- **Assets:** CC0 Poly Haven files, committed in `assets/` (~45 MB), so the static site needs no build step.
+  `scripts/fetch_assets.py` (stdlib only) is how they're produced: to add or swap an asset, edit its
+  `TEXTURES` / `MODELS` / `HDRIS` lists, re-run it, and commit the result. It skips files whose md5 already
+  matches Poly Haven's; `--check` only verifies `assets/` (exit 1 on a missing or changed file) and also lists
+  files the script doesn't know about. In production, Cloudflare Polish re-encodes the JPEGs, so a cold load
+  transfers about 20 MB of the 47 MB.
   If an asset is missing the game still boots: images become plain surfaces, PBR maps become flat maps, and a
   missing HDRI falls back to a flat sky plus a hemispheric fill light (`noHdri()` in `main.js`).
 - **Debug handle:** `window.__sflt = { G, scene, engine, pipelines, downgrade }` in the browser console.

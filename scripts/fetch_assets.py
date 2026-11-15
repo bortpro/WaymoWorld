@@ -3,11 +3,16 @@
 # ///
 """Download the CC0 Poly Haven assets SF Laser Taxi uses into assets/.
 
-    uv run scripts/fetch_assets.py
+    uv run scripts/fetch_assets.py           # download anything missing or not matching Poly Haven
+    uv run scripts/fetch_assets.py --check   # only verify assets/ against Poly Haven's md5s
+
+assets/ is committed, so the deployed static site needs no build step. This script is how those files
+are produced: to add or swap an asset, edit the lists below, re-run it, and commit the result. Files
+whose md5 already matches Poly Haven's are skipped, so re-running it only touches what changed.
 
 Everything comes from https://polyhaven.com (CC0, no attribution required, redistribution allowed).
-Re-running skips files that are already present.
 """
+import hashlib
 import json
 import sys
 import urllib.request
@@ -37,43 +42,73 @@ HDRIS = {
 }
 
 USER_AGENT = {"User-Agent": "sf-laser-taxi-asset-fetch/1.0"}
+TIMEOUT = 60  # seconds per request
 
 
-def get_json(url):
-    with urllib.request.urlopen(urllib.request.Request(url, headers=USER_AGENT)) as r:
-        return json.load(r)
+def get(url):
+    with urllib.request.urlopen(urllib.request.Request(url, headers=USER_AGENT), timeout=TIMEOUT) as r:
+        return r.read()
 
 
-def download(url, dest: Path):
-    if dest.exists() and dest.stat().st_size > 0:
-        return
+def md5(path: Path):
+    return hashlib.md5(path.read_bytes()).hexdigest()
+
+
+def wanted():
+    """Map each file under assets/ to its Poly Haven file entry ({url, md5, size})."""
+    files = {}
+    for name, res in TEXTURES.items():
+        info = json.loads(get(API + name))
+        for key, suffix in (("Diffuse", "diff"), ("nor_gl", "nor"), ("arm", "arm")):
+            files[f"textures/{name}_{suffix}.jpg"] = info[key][res]["jpg"]
+    for name, res in MODELS.items():
+        gltf = json.loads(get(API + name))["gltf"][res]["gltf"]
+        files[f"models/{name}/{name}.gltf"] = gltf
+        for rel, info in gltf.get("include", {}).items():
+            files[f"models/{name}/{rel}"] = info
+    for name, res in HDRIS.items():
+        files[f"hdri/{name}.hdr"] = json.loads(get(API + name))["hdri"][res]["hdr"]
+    return files
+
+
+def download(info, dest: Path):
+    # Write to a temporary file and rename, so an interrupted run never leaves a truncated asset
+    tmp = dest.with_name(dest.name + ".part")
     dest.parent.mkdir(parents=True, exist_ok=True)
-    with urllib.request.urlopen(urllib.request.Request(url, headers=USER_AGENT)) as r:
-        dest.write_bytes(r.read())
+    try:
+        tmp.write_bytes(get(info["url"]))
+        if md5(tmp) != info["md5"]:
+            raise RuntimeError(f"md5 mismatch downloading {info['url']}")
+        tmp.replace(dest)
+    finally:
+        tmp.unlink(missing_ok=True)
     print(f"  {dest.relative_to(ROOT)}  ({dest.stat().st_size / 1e6:.1f} MB)")
 
 
 def main():
-    for name, res in TEXTURES.items():
-        print(f"texture {name} @ {res}")
-        files = get_json(API + name)
-        for key, suffix in (("Diffuse", "diff"), ("nor_gl", "nor"), ("arm", "arm")):
-            download(files[key][res]["jpg"]["url"], ROOT / "textures" / f"{name}_{suffix}.jpg")
+    check = "--check" in sys.argv[1:]
+    files = wanted()
+    bad = []
+    for rel, info in files.items():
+        dest = ROOT / rel
+        if dest.exists() and md5(dest) == info["md5"]:
+            continue
+        if check:
+            print(f"  {'differs from Poly Haven' if dest.exists() else 'missing'}: {rel}")
+            bad.append(rel)
+        else:
+            download(info, dest)
 
-    for name, res in MODELS.items():
-        print(f"model {name} @ {res}")
-        gltf = get_json(API + name)["gltf"][res]["gltf"]
-        folder = ROOT / "models" / name
-        download(gltf["url"], folder / f"{name}.gltf")
-        for rel, info in gltf.get("include", {}).items():
-            download(info["url"], folder / rel)
+    on_disk = {str(p.relative_to(ROOT)) for p in ROOT.rglob("*") if p.is_file() and p.name != ".DS_Store"}
+    for rel in sorted(on_disk - set(files)):
+        print(f"  not in this script's lists: {rel}")
 
-    for name, res in HDRIS.items():
-        print(f"hdri {name} @ {res}")
-        download(get_json(API + name)["hdri"][res]["hdr"]["url"], ROOT / "hdri" / f"{name}.hdr")
-
-    total = sum(p.stat().st_size for p in ROOT.rglob("*") if p.is_file())
-    print(f"done: {total / 1e6:.1f} MB in {ROOT}")
+    total = sum((ROOT / rel).stat().st_size for rel in files if (ROOT / rel).exists())
+    if check:
+        print(f"{len(files) - len(bad)}/{len(files)} files match Poly Haven ({total / 1e6:.1f} MB)")
+        return 1 if bad else 0
+    print(f"done: {len(files)} files, {total / 1e6:.1f} MB in {ROOT}")
+    return 0
 
 
 if __name__ == "__main__":
