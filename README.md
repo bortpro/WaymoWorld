@@ -375,7 +375,7 @@ Don't delete other people's paths. Before pushing: `git pull --rebase` for unpus
 | What | Account |
 |---|---|
 | Gemini API / Google Cloud | `devstar7060@gcplab.me` |
-| Waymo Open Dataset (license accepted) | `jinscripts@gmail.com` |
+| Waymo Open Dataset (license accepted) | ask the team which account |
 
 ```bash
 gcloud auth login devstar7060@gcplab.me   # Gemini / GCP
@@ -392,7 +392,7 @@ Never paste the key into chat or pass it on the command line.
 Fetch camera JPEGs + poses from the v2 dataset (GCS, needs a license-accepted account):
 
 ```bash
-uv run scripts/fetch_waymo_images.py --account jinscripts@gmail.com --segments 1 --every 10
+uv run scripts/fetch_waymo_images.py --account <your-licensed-account> --segments 1 --every 10
 ```
 
 
