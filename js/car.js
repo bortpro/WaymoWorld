@@ -35,7 +35,6 @@ function makeMaterials(scene) {
         head: (() => { const m = pbr('headlight', '#ffffff', 0.1); m.emissiveColor = new BABYLON.Color3(1, 0.98, 0.94); m.emissiveIntensity = 2.2; return m; })(),
         tail: (() => { const m = pbr('taillight', '#300000', 0.2); m.emissiveColor = new BABYLON.Color3(1, 0.05, 0.08); m.emissiveIntensity = 1.6; return m; })(),
         accent: {},
-        parkedPaint: ['#1c2530', '#8b1e24', '#c9ccd1', '#2d4a37', '#e8e6e1', '#3a3d42'].map((c, i) => paint('parkedPaint' + i, c)),
     };
     return MATS;
 }
@@ -401,23 +400,6 @@ function contactShadowMaterial(scene) {
     blobMat.disableLighting = true;
     blobMat.zOffset = -3;
     return blobMat;
-}
-
-// One merged, instanceable mesh per paint colour for parked cars (no sensors, no animation)
-export function createParkedCarTemplates(scene) {
-    const M = makeMaterials(scene);
-    return M.parkedPaint.map((paint, i) => {
-        const car = createTaxi(scene, { sensors: false, paintMat: paint, name: 'parked' + i });
-        car.root.computeWorldMatrix(true);
-        const merged = BABYLON.Mesh.MergeMeshes(car.meshes.map(m => { m.computeWorldMatrix(true); return m; }), true, true, undefined, false, true);
-        car.blob.dispose();
-        car.root.dispose();
-        merged.name = 'parkedTemplate' + i;
-        merged.isPickable = false;
-        merged.receiveShadows = true;
-        merged.setEnabled(true);
-        return merged;
-    });
 }
 
 export function carMaterials(scene) { return makeMaterials(scene); }

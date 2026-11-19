@@ -72,11 +72,12 @@
             position: fixed; top: calc(18px + var(--safe-t)); right: calc(20px + var(--safe-r));
             width: 236px; padding: 12px 14px; font-size: 13px; z-index: 11; pointer-events: none;
         }
+        #lb-head { display: flex; align-items: center; gap: 8px; padding-bottom: 8px; margin-bottom: 6px; border-bottom: 1px solid var(--edge); }
         #lb-online {
-            display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600;
+            flex: 1; display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600;
             letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
-            padding-bottom: 8px; margin-bottom: 6px; border-bottom: 1px solid var(--edge);
         }
+        .lb-chevron { display: none; }
         #lb-online::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--dot, #2fe38a); box-shadow: 0 0 8px var(--dot, #2fe38a); }
         .lb-row { display: grid; grid-template-columns: 22px 1fr auto; gap: 6px; padding: 3px 0; }
         .lb-row .rank { color: var(--muted); font-family: 'JetBrains Mono', monospace; }
@@ -200,12 +201,29 @@
         body.touch .stat .v { font-size: 15px; }
         body.touch .stat .k { font-size: 8px; }
         body.touch .stats { gap: 12px; padding-left: 10px; }
-        body.touch #leaderboard { top: calc(8px + var(--safe-t)); right: calc(8px + var(--safe-r)); width: 150px; padding: 6px 10px; font-size: 11px; }
-        body.touch #kill-feed { top: calc(56px + var(--safe-t)); left: calc(10px + var(--safe-l)); }
+        /* Leaderboard: collapsed to a pill with the online count; tap it to expand the list */
+        body.touch #leaderboard { top: calc(8px + var(--safe-t)); right: calc(8px + var(--safe-r)); width: auto; padding: 8px 12px; font-size: 11px; }
+        body.touch #leaderboard.open { width: 170px; }
+        body.touch #lb-head { position: relative; pointer-events: auto; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        body.touch #lb-head::after { content: ''; position: absolute; inset: -10px -14px; }   /* bigger tap target */
+        body.touch #lb-online { font-size: 10px; letter-spacing: 0.06em; white-space: nowrap; }
+        body.touch .lb-chevron {
+            display: block; width: 7px; height: 7px; margin: 0 2px 3px 4px; transition: transform 0.2s;
+            border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg);
+        }
+        body.touch #leaderboard.open .lb-chevron { transform: rotate(-135deg); margin-bottom: -3px; }
+        body.touch #leaderboard:not(.open) #lb-head { padding-bottom: 0; margin-bottom: 0; border-bottom: none; }
+        body.touch #leaderboard:not(.open) #lb-rows { display: none; }
+        body.touch #kill-feed { top: calc(64px + var(--safe-t)); left: calc(10px + var(--safe-l)); }
         body.touch .feed-item { font-size: 11px; padding: 4px 10px; }
-        body.touch #dash { left: 50%; transform: translateX(-50%); bottom: calc(10px + var(--safe-b)); width: min(270px, 40vw); padding: 8px 10px; gap: 6px 10px; }
-        body.touch #speed-val { font-size: 24px; }
-        body.touch #minimap-wrap { top: calc(8px + var(--safe-t)); bottom: auto; right: calc(170px + var(--safe-r)); }
+        /* Speed, armor and laser: compact, top centre, out of the thumbs' way */
+        body.touch #dash { left: 50%; transform: translateX(-50%); top: calc(8px + var(--safe-t)); bottom: auto; width: 210px; padding: 6px 10px; gap: 4px 10px; }
+        body.touch #speedo { padding-right: 10px; }
+        body.touch #speed-val { font-size: 20px; }
+        body.touch #speedo .k { font-size: 8px; }
+        body.touch .bar .lbl { font-size: 9px; margin-bottom: 3px; }
+        body.touch .bar .track { height: 5px; }
+        body.touch #minimap-wrap { top: calc(50px + var(--safe-t)); bottom: auto; right: calc(8px + var(--safe-r)); }
         body.touch #minimap { width: auto !important; height: 80px !important; }
         body.touch .modal { padding: 18px 20px; }
         body.touch .modal h1 { font-size: 28px; }
@@ -215,12 +233,14 @@
             body.touch .controls { grid-template-columns: auto 1fr auto 1fr; font-size: 11px; }
             body.touch .modal { max-width: 640px; padding: 12px 18px; }
         }
-        @media (orientation: portrait) {
+        @media (orientation: portrait), (max-width: 740px) {
+            /* no room for the logo next to the top-centre dash on small screens */
             body.touch .logo { display: none; }
             body.touch .stats { border-left: none; padding-left: 0; }
-            body.touch #leaderboard { width: 130px; }
+        }
+        @media (orientation: portrait) {
             body.touch #minimap-wrap { top: calc(64px + var(--safe-t)); right: calc(8px + var(--safe-r)); }
-            body.touch #dash { bottom: auto; top: calc(64px + var(--safe-t)); left: calc(10px + var(--safe-l)); transform: none; width: min(220px, 52vw); }
+            body.touch #dash { bottom: auto; top: calc(64px + var(--safe-t)); left: calc(10px + var(--safe-l)); transform: none; width: min(200px, 50vw); }
             body.touch #kill-feed { top: calc(150px + var(--safe-t)); }
             body.touch #crosshair { top: 47%; }
         }
@@ -250,7 +270,7 @@
     </div>
 
     <div id="leaderboard" class="panel">
-        <div id="lb-online">Connecting…</div>
+        <div id="lb-head"><div id="lb-online">Connecting…</div><span class="lb-chevron" aria-hidden="true"></span></div>
         <div id="lb-rows"></div>
     </div>
 

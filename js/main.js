@@ -73,7 +73,7 @@ function createScene(engine) {
 
 // HDRI sky + image-based lighting, sun aligned with the sun in the HDRI
 function createLighting(scene) {
-    // If the HDRI is missing (a deploy that skipped scripts/fetch_assets.py), drop the sky and IBL
+    // If the HDRI is missing (e.g. a deploy without assets/), drop the sky and IBL
     // and fall back to a flat sky colour and a hemispheric fill, so the scene still becomes ready
     let hdriFailed = false;
     const noHdri = () => {

@@ -35,7 +35,9 @@ export function renderLeaderboard() {
     }
     const everyone = [...G.roster.values()];
     const n = everyone.filter(p => !p.bot).length, nBots = everyone.length - n;
-    header.textContent = `${n} player${n === 1 ? '' : 's'} online` + (nBots ? ` · ${nBots} bots` : '');
+    // touch screens show this alone in a small collapsed pill, so keep it short there
+    const online = G.isTouch ? `${n} online` : `${n} player${n === 1 ? '' : 's'} online`;
+    header.textContent = online + (nBots ? ` · ${nBots} bots` : '');
     const sorted = everyone.sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
     const shown = sorted.slice(0, 10);
     const meIndex = sorted.findIndex(p => p.id === G.myId);
@@ -255,6 +257,16 @@ function setupTouchControls() {
     };
     hold('fire-btn', 'space');
     hold('boost-btn', 'shift');
+
+    // The leaderboard starts collapsed to its online count (CSS); tapping the header expands it
+    const lb = $('leaderboard'), lbHead = $('lb-head');
+    lbHead.setAttribute('role', 'button');
+    lbHead.setAttribute('aria-controls', 'lb-rows');
+    lbHead.setAttribute('aria-expanded', 'false');
+    lbHead.addEventListener('click', () => {
+        const open = lb.classList.toggle('open');
+        lbHead.setAttribute('aria-expanded', open);
+    });
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) { release(); G.keys.space = G.keys.shift = false; }
     });

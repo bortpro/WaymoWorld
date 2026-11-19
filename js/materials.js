@@ -29,8 +29,8 @@ export function loadImage(url) {
     return track(new Promise((resolve) => {
         const img = new Image();
         img.onload = () => resolve(img);
-        // A missing asset (e.g. a deploy that skipped scripts/fetch_assets.py) must not stop the
-        // game from booting and connecting: paint with a plain light surface instead
+        // A missing asset (e.g. a deploy without assets/) must not stop the game from booting
+        // and connecting: paint with a plain light surface instead
         img.onerror = () => {
             console.warn('failed to load ' + url + ', using a plain surface');
             const c = makeCanvas(64);
@@ -85,12 +85,13 @@ export function phTexture(name, suffix, { linear = false } = {}) {
 }
 
 // Full PBR material from a Poly Haven set. UVs are expected in world units / uvScale already.
-export function phMaterial(name, { tint = null, bump = 1.0, roughness = 1.0, metallic = 0, uScale = 1, vScale = 1, albedoBoost = 1 } = {}) {
+// albedo: false skips the diffuse map, for callers that set their own albedoTexture.
+export function phMaterial(name, { tint = null, bump = 1.0, roughness = 1.0, metallic = 0, uScale = 1, vScale = 1, albedoBoost = 1, albedo = true } = {}) {
     const m = new BABYLON.PBRMaterial(name, G.scene);
-    m.albedoTexture = phTexture(name, 'diff');
+    if (albedo) m.albedoTexture = phTexture(name, 'diff');
     m.bumpTexture = phTexture(name, 'nor', { linear: true });
     m.metallicTexture = phTexture(name, 'arm', { linear: true });
-    for (const t of [m.albedoTexture, m.bumpTexture, m.metallicTexture]) { t.uScale = uScale; t.vScale = vScale; }
+    for (const t of [m.albedoTexture, m.bumpTexture, m.metallicTexture]) if (t) { t.uScale = uScale; t.vScale = vScale; }
     m.useAmbientOcclusionFromMetallicTextureRed = true;
     m.useRoughnessFromMetallicTextureGreen = true;
     m.useMetallnessFromMetallicTextureBlue = true;
@@ -540,8 +541,8 @@ export async function createMaterials() {
     M.asphalt.useVertexColors = true;    // large-scale patching variation baked into terrain colours
     M.sidewalk = phMaterial('concrete_pavement', { bump: 0.7, tint: '#d6d2c8', albedoBoost: 1.1 });
     M.roofShingle = phMaterial('grey_roof_01', { bump: 1.0, tint: '#b3aca3', albedoBoost: 1.3 });
-    M.grass = phMaterial('leafy_grass', { bump: 0.9 });
-    M.grass.albedoTexture.dispose();
+    // albedo is the recoloured photo loaded above, so don't load and upload the raw one too
+    M.grass = phMaterial('leafy_grass', { bump: 0.9, albedo: false });
     M.grass.albedoTexture = canvasTexture('grass_a', lushGrass(grass));
     M.sand = phMaterial('coast_sand_01', { bump: 0.6, tint: '#e9dcc0', albedoBoost: 1.15 });
     M.sand.useVertexColors = true;
