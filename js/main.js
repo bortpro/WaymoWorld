@@ -1,7 +1,7 @@
 // SF Laser Taxi: boot, rendering pipeline, game loop, camera.
 
 import { G, STATE_SEND_MS, getElevation, clamp, lerp } from './shared.js';
-import { createMaterials, setLoadProgressHandler } from './materials.js';
+import { createMaterials, setLoadProgressHandler, allTracked } from './materials.js';
 import { buildCity } from './city.js';
 import { buildProps, updateSignals, buildCableCars } from './props.js';
 import { Vehicle, Laser, initFx, updateLasers, updateFx, burst, explosion } from './game.js';
@@ -15,14 +15,17 @@ const HDRI = 'assets/hdri/kloofendal_48d_partly_cloudy_puresky.hdr';
 // --- Quality tiers -------------------------------------------------------------------------------
 // ultra: SSR + 3x2048 cascaded shadows + MSAA, up to 1.5x pixel density
 // high:  3x2048 shadows + MSAA, 1.25x density
-// low:   (phones) 2x1024 shadows, FXAA, 1x density
+// low:   (phones) 2x1024 shadows, FXAA, 1x density, and a much smaller texture budget: iOS Safari
+//        kills the WebGL context (-> "Unable to create texture") once the page holds a few hundred MB
+//        of textures and canvases, so low uses 512 px facade atlases, Poly Haven maps downscaled to
+//        512 px, a 512 px sky cube, and no CPU copies of uploaded images (see createEngine)
 // On top of the tier, dynamic resolution keeps the frame rate up (see the watchdog in main()).
 // SSAO2 is wired up but off: in this scene it smears noise over the sky and road (?ssao=1 to try it)
 const SSAO_ON = new URLSearchParams(location.search).get('ssao') === '1';
 const QUALITY = {
-    ultra: { dpr: 1.5, shadowSize: 2048, cascades: 3, ssao: SSAO_ON, ssr: true, msaa: 4, glowSamples: 4 },
-    high: { dpr: 1.25, shadowSize: 2048, cascades: 3, ssao: SSAO_ON, ssr: false, msaa: 4, glowSamples: 2 },
-    low: { dpr: 1.0, shadowSize: 1024, cascades: 2, ssao: false, ssr: false, msaa: 1, glowSamples: 1 },
+    ultra: { dpr: 1.5, shadowSize: 2048, cascades: 3, ssao: SSAO_ON, ssr: true, msaa: 4, glowSamples: 4, skySize: 1024 },
+    high: { dpr: 1.25, shadowSize: 2048, cascades: 3, ssao: SSAO_ON, ssr: false, msaa: 4, glowSamples: 2, skySize: 1024 },
+    low: { dpr: 1.0, shadowSize: 1024, cascades: 2, ssao: false, ssr: false, msaa: 1, glowSamples: 1, skySize: 512 },
 };
 G.isTouch = (() => {
     const force = new URLSearchParams(location.search).get('touch');
@@ -44,7 +47,17 @@ function createEngine() {
     const canvas = document.getElementById('renderCanvas');
     const engine = new BABYLON.Engine(canvas, Q.msaa === 1, {
         powerPreference: 'high-performance', stencil: true, preserveDrawingBuffer: false, useHighPrecisionMatrix: true,
+        // Restoring a lost context needs a CPU copy of every texture and buffer. On phones the context is
+        // lost because memory ran out, so restoring would fail anyway: don't keep the copies
+        doNotHandleContextLost: G.isTouch || G.quality === 'low',
     }, false);
+    // Listen on the canvas: Babylon doesn't hook context-lost events when doNotHandleContextLost is set
+    canvas.addEventListener('webglcontextlost', () => {
+        G.contextLost = true;
+        console.error('WebGL context lost');
+        showLoadError('the graphics memory ran out. Close other tabs and reload'
+            + (G.quality === 'low' ? '.' : ', or pick Low graphics.'));
+    });
     // Reverse depth would help far-range precision, but SSAO2 reads it wrong (noise everywhere)
     engine.useReverseDepthBuffer = new URLSearchParams(location.search).get('revdepth') === '1';
     engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio || 1, Q.dpr));
@@ -92,7 +105,7 @@ function createLighting(scene) {
     const env = new BABYLON.HDRCubeTexture(HDRI, scene, 256, false, true, false, true, null, noHdri);
     scene.environmentTexture = env;
     scene.environmentIntensity = 0.85;
-    const skyTex = new BABYLON.HDRCubeTexture(HDRI, scene, 1024, true, false, false, false, null, noHdri);
+    const skyTex = new BABYLON.HDRCubeTexture(HDRI, scene, Q.skySize, true, false, false, false, null, noHdri);
     const sky = scene.createDefaultSkybox(skyTex, true, 5000, 0, false);
     sky.infiniteDistance = true;
     sky.isPickable = false;
@@ -422,11 +435,23 @@ async function main() {
         hud.updateTags();
     });
 
-    scene.executeWhenReady(() => {
+    const markReady = () => {
+        if (document.body.classList.contains('ready') || G.contextLost) return;
         document.body.classList.add('ready');
         loadLabel.textContent = 'Ready';
         document.getElementById('start-btn').disabled = false;
-    });
+    };
+    // low-quality textures are canvases that count as ready before their JPEGs arrive, so also wait for the downloads
+    scene.executeWhenReady(() => allTracked().then(markReady));
+    // executeWhenReady waits for every mesh and material. If one never gets there (a shader that fails
+    // to compile on some GPU, a texture that never arrives), don't leave the player stuck at 100%:
+    // log what's missing and let them start anyway
+    setTimeout(() => {
+        if (document.body.classList.contains('ready')) return;
+        const notReady = scene.meshes.filter(m => m.isEnabled() && m.subMeshes && !m.isReady(true)).map(m => m.name);
+        console.warn(`scene not ready after 30 s, enabling Start anyway. ${notReady.length} meshes not ready:`, notReady.slice(0, 30));
+        markReady();
+    }, 30000);
     engine.runRenderLoop(() => scene.render());
 
     // expose for debugging in the console
@@ -453,9 +478,20 @@ function startGame() {
     sendJoin();
 }
 
+function showLoadError(text) {
+    if (G.gameActive) { toast('Graphics error: ' + text); return; }
+    const l = document.getElementById('load-label');
+    if (l) l.textContent = 'Failed to load: ' + text;
+    document.getElementById('start-btn').disabled = true;
+}
+
 main().catch(err => {
     console.error(err);
-    const l = document.getElementById('load-label');
-    if (l) l.textContent = 'Failed to load: ' + err.message;
+    // "Unable to create texture" / null GL objects mean the WebGL context is gone (out of memory)
+    if (G.contextLost || /unable to create/i.test(err.message)) {
+        showLoadError('the graphics memory ran out (' + err.message + '). Close other tabs and reload.');
+    } else {
+        showLoadError(err.message);
+    }
 });
 

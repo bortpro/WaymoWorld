@@ -232,6 +232,14 @@ Other clients and the server assume these exact values. Change them only togethe
 | `high` | 1.25× | 3 × 2048, 420 m | 4× | off | |
 | `low` | 1.0× | 2 × 1024, PCF low, 240 m | FXAA | off | touch devices |
 
+- **Low is also a memory budget.** iOS Safari drops the WebGL context once the page holds a few hundred MB of
+  textures and canvases. Babylon then throws `Unable to create texture`, or the Start button never enables.
+  So on `low`, facade atlases are 512 px instead of 1024, Poly Haven maps are downscaled to 512 px canvases
+  (`phTextureSmall()`), the sky cube is 512, temporary canvases are freed right away (`freeCanvas()`), and on
+  touch devices the engine runs with `doNotHandleContextLost` so it doesn't keep CPU copies of uploaded textures.
+  That's about 100 MB of textures instead of about 600 MB. If the scene still isn't ready 30 s after loading,
+  Start is enabled anyway and the meshes that aren't ready are logged with `console.warn`.
+
 - **Lighting:** `kloofendal_48d_partly_cloudy_puresky` HDRI as both the skybox (1024 cube) and IBL (256,
   prefiltered, `environmentIntensity 0.85`); directional sun at intensity 3.4, slightly warm.
 - **Post** (`createPipelines()`): `DefaultRenderingPipeline` in HDR with ACES tone mapping (exposure 1.15,
