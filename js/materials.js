@@ -14,9 +14,15 @@ const TEX = 'assets/textures/';
 export const TRIM_V = 0.012;        // UV v for solid trim colour inside every facade atlas
 export const ACCENT_V = 0.033;      // UV v for the accent pin-stripe (Victorians)
 
-let loadTracker = { total: 0, done: 0, onProgress: null };
+let loadTracker = { total: 0, done: 0, onProgress: null, all: [] };
 export function setLoadProgressHandler(fn) { loadTracker.onProgress = fn; }
+// Resolves once every tracked download has finished (or failed); items tracked later are included
+export async function allTracked() {
+    let n;
+    do { n = loadTracker.all.length; await Promise.all(loadTracker.all); } while (n !== loadTracker.all.length);
+}
 function track(promise) {
+    loadTracker.all.push(promise.catch(() => {}));
     loadTracker.total++;
     loadTracker.onProgress?.(loadTracker.done, loadTracker.total);
     return promise.finally(() => {
@@ -45,6 +51,16 @@ export function loadImage(url) {
 
 function anisotropy() { return G.quality === 'low' ? 4 : 16; }
 
+// Texture budget. Phones (low) get a fraction of desktop's texture memory: iOS Safari drops the WebGL
+// context (-> "Unable to create texture") and caps total canvas memory at a few hundred MB. At 1024 px the
+// 15 facade atlases alone are ~250 MB on the GPU plus ~240 MB of canvases.
+const LOW = () => G.quality === 'low';
+const facadeSize = () => (LOW() ? 512 : 1024);
+const LOW_PH_SIZE = 512;    // Poly Haven maps (1-2k) are downscaled to this on low
+
+// Free a canvas's backing store now (Safari only frees it on GC, which can come too late)
+function freeCanvas(c) { if (c && c.width !== undefined) { c.width = 0; c.height = 0; } }
+
 // 4x4 single-colour stand-ins for a Poly Haven map: neutral albedo, flat normal, AO 1 / rough / non-metal
 const FLAT_MAPS = { diff: '#9a9890', nor: 'rgb(128,128,255)', arm: 'rgb(255,235,0)' };
 const flatMapURLs = {};
@@ -61,6 +77,7 @@ function flatMapURL(suffix) {
 
 // Poly Haven texture set as a Babylon texture (waits for load so the start button knows when we're ready)
 export function phTexture(name, suffix, { linear = false } = {}) {
+    if (LOW()) return phTextureSmall(name, suffix, linear);
     const scene = G.scene;
     let tex;
     const p = new Promise((resolve) => {
@@ -81,6 +98,31 @@ export function phTexture(name, suffix, { linear = false } = {}) {
     tex.anisotropicFilteringLevel = anisotropy();
     tex.gammaSpace = !linear;
     tex.wrapU = tex.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
+    return tex;
+}
+
+// Low quality: decode the JPEG, draw it into a small canvas and upload that, so the GPU holds
+// a 512 px map (1.4 MB with mips) instead of a 2048 px one (22 MB). The canvas starts as the flat map,
+// so a missing asset still leaves a sensible surface.
+function phTextureSmall(name, suffix, linear) {
+    const url = `${TEX}${name}_${suffix}.jpg`;
+    const c = makeCanvas(LOW_PH_SIZE);
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = FLAT_MAPS[suffix];
+    ctx.fillRect(0, 0, LOW_PH_SIZE, LOW_PH_SIZE);
+    const tex = canvasTexture(`${name}_${suffix}`, c, { linear });
+    track(new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, LOW_PH_SIZE, LOW_PH_SIZE);
+            tex.update(true);
+            resolve();
+        };
+        img.onerror = () => { console.warn(`failed to load ${url}, using a flat map`); resolve(); };
+        img.src = url;
+    }));
     return tex;
 }
 
@@ -171,6 +213,13 @@ function painter(size, tileW, tileH) {
     };
 }
 
+// The painter's height canvas is only needed to make the normal map
+function facadeMaps(p, strength) {
+    const normal = heightToNormal(p.height, strength);
+    freeCanvas(p.height);
+    return { albedo: p.albedo, normal, arm: p.arm };
+}
+
 // Tile a source image across the albedo canvas, optionally rotated 90 degrees (planks -> clapboard)
 function tileImage(ctx, img, size, repeats, rotate = false, tint = null) {
     ctx.save();
@@ -212,9 +261,10 @@ function detailImage(img, mean = 0.94, contrast = 0.8) {
 // Recolour Poly Haven's leafy_grass (mostly dead brown leaves) into a lush, watered lawn: luminance
 // detail is kept, hue goes to greens, with fresh yellow-green where the photo was already green
 function lushGrass(img) {
-    const c = makeCanvas(img.width, img.height);
+    const w = LOW() ? Math.min(img.width, LOW_PH_SIZE) : img.width, h = LOW() ? Math.min(img.height, LOW_PH_SIZE) : img.height;
+    const c = makeCanvas(w, h);
     const ctx = c.getContext('2d');
-    ctx.drawImage(img, 0, 0);
+    ctx.drawImage(img, 0, 0, w, h);
     const d = ctx.getImageData(0, 0, c.width, c.height);
     const px = d.data;
     let sum = 0;
@@ -259,7 +309,7 @@ function paintGlass(p, x, y, w, h, rnd, { tint = '#1d2a33', metal = 0.35, rough 
 // --- Victorian / Edwardian row house facade (2 bays x 2 floors per tile) ---
 export const VICTORIAN_TILE = { w: 9.0, h: 9.2 };
 function victorianFacade(pal, imgs, seed) {
-    const T = VICTORIAN_TILE, S = 1024;
+    const T = VICTORIAN_TILE, S = facadeSize();
     const p = painter(S, T.w, T.h);
     const rnd = mulberry32(seed);
     const floorH = T.h / 2, bayW = T.w / 2;
@@ -318,7 +368,7 @@ function victorianFacade(pal, imgs, seed) {
     // the very bottom rows are the solid trim band used by cornices / frames
     p.fill(0, 0, T.w, 0.18, pal.trim, 0.75, [1, 0.42, 0]);
 
-    return { albedo: p.albedo, normal: heightToNormal(p.height, 3.5), arm: p.arm };
+    return facadeMaps(p, 3.5);
 }
 
 // --- Downtown office facades ---
@@ -330,7 +380,7 @@ export const DOWNTOWN_TILES = {
 };
 
 function downtownFacade(style, imgs, seed) {
-    const T = DOWNTOWN_TILES[style], S = 1024;
+    const T = DOWNTOWN_TILES[style], S = facadeSize();
     const p = painter(S, T.w, T.h);
     const rnd = mulberry32(seed);
     if (style === 'glass') {
@@ -352,7 +402,7 @@ function downtownFacade(style, imgs, seed) {
             }
         }
         p.fill(0, 0, T.w, 0.18, '#aab3bb', 0.85, [1, 0.3, 1]);
-        return { albedo: p.albedo, normal: heightToNormal(p.height, 2.5), arm: p.arm };
+        return facadeMaps(p, 2.5);
     }
 
     const wall = style === 'brick' ? imgs.brick : style === 'stone' ? imgs.sandstone : imgs.plaster;
@@ -384,13 +434,13 @@ function downtownFacade(style, imgs, seed) {
         }
     }
     p.fill(0, 0, T.w, 0.18, trimCol, 0.75, [1, 0.55, 0]);
-    return { albedo: p.albedo, normal: heightToNormal(p.height, 3), arm: p.arm };
+    return facadeMaps(p, 3);
 }
 
 // --- Ground-floor shopfronts: 4 different shops side by side (6 m each), 5 m tall ---
 export const STOREFRONT_TILE = { w: 24.0, h: 5.0 };
 function storefrontFacade(imgs) {
-    const T = STOREFRONT_TILE, S = 1024;
+    const T = STOREFRONT_TILE, S = facadeSize();
     const p = painter(S, T.w, T.h);
     const rnd = mulberry32(77);
     tileImage(p.A, imgs.sandstone, S, 6, false, '#d8ccb6');
@@ -406,7 +456,7 @@ function storefrontFacade(imgs) {
         p.fill(x + 0.8, 4.12, 4.4, 0.36, '#efe6cf', 0.9, [1, 0.5, 0]);          // lettering strip
     }
     p.fill(0, 0, T.w, 0.18, '#cfc3ab', 0.75, [1, 0.6, 0]);
-    return { albedo: p.albedo, normal: heightToNormal(p.height, 2.5), arm: p.arm };
+    return facadeMaps(p, 2.5);
 }
 
 function facadeMaterial(name, maps, { clearCoat = false } = {}) {
@@ -448,7 +498,9 @@ function waterNormalCanvas(size = 512) {
         img.data[i + 3] = 255;
     }
     ctx.putImageData(img, 0, 0);
-    return heightToNormal(h, 1.6);
+    const normal = heightToNormal(h, 1.6);
+    freeCanvas(h);
+    return normal;
 }
 
 // Alpha-tested leaf cluster card for street trees
@@ -536,6 +588,8 @@ export async function createMaterials() {
         M.downtown[style] = facadeMaterial('downtown_' + style, downtownFacade(style, imgs, 200 + i));
     }
     M.storefront = facadeMaterial('storefront', storefrontFacade(imgs));
+    freeCanvas(imgs.planksDetail);
+    freeCanvas(imgs.plasterDetail);
 
     M.asphalt = phMaterial('asphalt_02', { bump: 0.8, tint: '#ffffff', albedoBoost: 1.3 });
     M.asphalt.useVertexColors = true;    // large-scale patching variation baked into terrain colours
